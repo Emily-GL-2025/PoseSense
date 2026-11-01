@@ -1,0 +1,32 @@
+# Python environment and generated caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Local configuration
+.codex/
+.agents/
+.aws/
+.env
+.env.*
+
+# Downloaded models, recordings and videos
+*.pt
+*.npz
+*.mp4
+*.webm
+*.m4v
+*.mov
+*.avi
+*.mkv
+
+# Generated import and performance outputs
+/standards/
+/benchmarks/
+/SS*.png
+
+# Local preparation and machine-specific inventories
+/.publish-prep/
+/FILE_INVENTORY*.md

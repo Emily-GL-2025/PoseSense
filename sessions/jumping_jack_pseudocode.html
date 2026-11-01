@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="A beginner-friendly, source-backed guide to jumping-jack posture, phase, timing and counting."><title>Understand the rules in plain steps · PoseSense</title><style>
+:root{color-scheme:light;--ink:#172b40;--muted:#52667c;--line:#d9e3ed;--blue:#175fa7;--green:#176547;--amber:#795300;--red:#a82e3a;--paper:#fff;--bg:#f3f6fa}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.7 'Segoe UI',system-ui,sans-serif}a{color:var(--blue);text-underline-offset:3px}a:hover{text-decoration-thickness:2px}
+.top{background:#142b41;color:white;padding:18px max(20px,calc((100vw - 1080px)/2));display:flex;align-items:center;flex-wrap:wrap;gap:16px}.top strong{font-size:14px;letter-spacing:1px}.top nav{display:flex;flex-wrap:wrap;gap:10px}.top a{color:#dceafa;font-size:14px;padding:5px 10px;border-radius:5px;text-decoration:none}.top a[aria-current=page]{background:#eaf3ff;color:#142b41}
+main{max-width:1120px;margin:0 auto;padding:40px 28px 60px;min-width:0}header{max-width:860px;margin-bottom:32px}.eyebrow{font-size:13px;letter-spacing:1.5px;color:var(--blue);font-weight:700;text-transform:uppercase}h1{font-size:clamp(32px,4vw,48px);line-height:1.15;letter-spacing:-1px;margin:12px 0 18px}h2{font-size:27px;line-height:1.3;margin:0 0 16px}h3{font-size:20px;line-height:1.4;margin:22px 0 10px}p{margin:12px 0}.lead{font-size:20px;color:#3c536d}.small{font-size:14px;color:var(--muted)}section{padding:28px;background:white;border:1px solid var(--line);border-radius:10px;margin:22px 0;min-width:0}
+.callout{padding:16px 20px;background:#eaf3ff;border-left:4px solid var(--blue);margin:20px 0}.callout.warn{background:#fff5db;border-color:var(--amber)}.callout.danger{background:#fdeef0;border-color:var(--red)}.callout p:first-child{margin-top:0}.callout p:last-child{margin-bottom:0}
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.fact{background:var(--bg);border-radius:7px;padding:16px}.fact strong{display:block}.fact p{font-size:15px;margin:6px 0 0}.formula{font:15px/1.9 Consolas,monospace;background:#f5f8fc;border:1px solid var(--line);padding:16px 20px;white-space:pre-wrap;overflow-wrap:anywhere}
+code{font:.9em/1.6 Consolas,monospace;background:#edf2f8;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{padding:20px;background:#142b41;color:#e4edf6;border-radius:8px;font:14px/1.7 Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;tab-size:4}pre code{padding:0;background:none;color:inherit;white-space:inherit}
+.table-wrap{overflow:auto;margin:18px 0}table{border-collapse:collapse;width:100%;font-size:15px;text-align:left}th,td{padding:11px 13px;border-bottom:1px solid var(--line);vertical-align:top}th{background:#edf3f9;font-weight:650}caption{text-align:left;font-size:14px;color:var(--muted);padding:0 0 12px}.state{display:inline-block;padding:1px 7px;border-radius:4px;font-size:14px;font-weight:650}.state.closed{background:#e7f4ed;color:var(--green)}.state.open{background:#e8f2ff;color:var(--blue)}.state.unknown{background:#edf0f5;color:#405269}.state.none{background:#fff3d4;color:var(--amber)}.state.invalid{background:#fdeef0;color:var(--red)}
+ul,ol{padding-left:24px}li{margin:9px 0}details{border:1px solid var(--line);border-radius:7px;padding:14px 18px;margin:18px 0}summary{cursor:pointer;font-weight:650;color:var(--blue)}button{font:inherit;font-size:15px;border:1px solid #9db1c8;border-radius:6px;padding:9px 15px;color:var(--ink);background:white;cursor:pointer}button:hover{background:#eaf3ff}button:disabled{opacity:.5;cursor:default}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--blue);outline-offset:3px}.buttons{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}
+.diagram{overflow:auto;margin:20px 0;background:#fbfdff;border:1px solid var(--line);border-radius:8px;padding:14px}.diagram svg{display:block;width:100%;height:auto;min-width:680px}.diagram text{font-family:'Segoe UI',system-ui,sans-serif;fill:var(--ink);font-size:16px}.diagram .title{font-size:17px;font-weight:650}.diagram .minor{font-size:14px;fill:var(--muted)}.diagram .box{fill:#f2f6fb;stroke:#b8c9dc;stroke-width:1.5}.diagram .decision{fill:#fff6dd;stroke:#b99853;stroke-width:1.5}.diagram .edge{fill:none;stroke:#617992;stroke-width:2}.diagram .closed{fill:#e7f4ed;stroke:#9fc8b5}.diagram .open{fill:#e8f2ff;stroke:#accbe9}.diagram .invalid{fill:#fdeef0;stroke:#d1a3a8}.diagram .none{fill:#fff3d4;stroke:#d5c299}.diagram .note{fill:#f2f5f8;stroke:#ced9e3}.legend{font-size:14px;color:var(--muted)}
+.walk{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}.walk div{background:var(--bg);padding:13px;border-radius:6px;font-size:13px}.walk strong{font-size:20px;display:block}.phase-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:16px 0}.phase-row span{border:2px solid var(--line);border-radius:6px;padding:10px 14px;opacity:.65}.phase-row span.active{border-color:var(--blue);background:#eaf3ff;opacity:1;font-weight:700}
+.line-list{border:1px solid var(--line);border-radius:8px;overflow:hidden}.code-row{display:grid;grid-template-columns:44px minmax(0,1.2fr) minmax(0,1fr);border-bottom:1px solid var(--line)}.code-row:last-child{border:0}.line-no{font:13px/1.7 Consolas,monospace;padding:12px 7px;background:#edf3f9;color:#52667c;text-align:right;text-decoration:none}.code-row pre{margin:0;border-radius:0;background:#142b41;padding:12px 14px;font-size:13px;min-width:0}.code-row .comment{padding:12px 15px;font-size:14px;min-width:0}.code-row .comment code{color:#31516d;background:transparent;padding:0;font-size:13px}.code-row.important .comment{background:#eaf3ff}.code-head{display:grid;grid-template-columns:44px minmax(0,1.2fr) minmax(0,1fr);font-size:13px;font-weight:650;color:var(--muted);padding-bottom:9px}.code-head span{padding:0 14px}
+.jump-links{display:flex;flex-wrap:wrap;gap:8px 20px;margin:18px 0}.jump-links a{font-size:14px}footer{font-size:13px;color:var(--muted);overflow-wrap:anywhere;padding:18px 0}.hash{font:12px Consolas,monospace}.skip{position:absolute;top:-80px;left:20px;padding:10px;background:white}.skip:focus{top:8px;z-index:4}
+@media(max-width:760px){body{font-size:16px}main{padding:26px 14px 40px}.top{padding:16px}.top nav{gap:5px}.top a{padding:6px;font-size:13px}section{padding:22px 17px}.facts{grid-template-columns:1fr}.walk{grid-template-columns:1fr 1fr}.code-head{display:none}.code-row{grid-template-columns:36px minmax(0,1fr)}.code-row .comment{grid-column:2}.code-row .line-no{grid-row:1/3}.code-row pre{font-size:13px}.diagram{padding:8px}h2{font-size:24px}.lead{font-size:18px}}
+@media print{@page{margin:14mm}.top,.buttons,.skip{display:none}body{background:white;font-size:10pt}main{margin:0;padding:0;max-width:none}section{border:0;border-top:1px solid #aaa;padding:20px 0;border-radius:0}h1{font-size:27pt}h2{font-size:18pt}h2,h3{break-after:avoid}.diagram{overflow:visible;border:0;padding:0}.diagram svg{min-width:0}pre,.code-row pre{background:#f3f5f8;color:#172b40}figure,.callout,.code-row{break-inside:avoid}.table-wrap{overflow:visible}.facts{grid-template-columns:1fr 1fr 1fr}.code-row{grid-template-columns:36px minmax(0,1.2fr) minmax(0,1fr)}.code-row .comment{grid-column:auto}.hash{font-size:8pt}}
+</style></head>
+<body><a class="skip" href="#content">Skip to guide</a><div class="top"><strong>POSESENSE / LEARN THE COUNTER</strong><nav aria-label="Three teaching guides"><a href="jumping_jack_flowchart.html" >1. Follow the flowchart</a><a href="jumping_jack_pseudocode.html" aria-current=page>2. Read the pseudocode</a><a href="jumping_jack_python_comments.html" >3. Python, line by line</a></nav></div>
+<main id="content"><header><div class="eyebrow">Guide 2 of 3 · Read the pseudocode</div><h1>Understand the rules in plain steps</h1><p class="lead">Read the algorithm as plain-language pseudocode. Separate measuring one pose from confirming its phase and completing a repetition.</p><p class="small">Current application source inspected 7 October 2026. Read the guides in order, or use the same worked example in each one.</p></header><section id="three-ideas"><h2>First, separate three different questions</h2>
+<div class="facts"><div class="fact"><strong>1. Current posture</strong><p>What do the six joints say <em>in this sample</em>? <code>classify()</code> returns CLOSED, OPEN or <code>None</code>.</p></div>
+<div class="fact"><strong>2. Pending posture</strong><p>Which candidate is being timed? A matching run of processed observations must span at least <strong>60 ms</strong>.</p></div>
+<div class="fact"><strong>3. Stable phase</strong><p>What does the counter remember? <code>self.state</code> is UNKNOWN, CLOSED or OPEN. The phase changes only after confirmation, or a reset.</p></div></div>
+<div class="callout"><p><strong>UNKNOWN means “the cycle has not been armed from a confirmed CLOSED pose.”</strong> A person can look OPEN in the current sample while the stable phase remains UNKNOWN. Confirming OPEN alone cannot start a cycle.</p></div>
+<p>A repetition is a remembered sequence: confirmed <span class="state closed">CLOSED</span> → confirmed <span class="state open">OPEN</span> → confirmed <span class="state closed">CLOSED</span>. Only the final OPEN → CLOSED transition adds one.</p>
+<div class="callout warn"><p><strong>An intermediate pose does not automatically mean UNKNOWN.</strong> Valid joints that satisfy neither complete posture return <code>None</code>: keep the stable phase and cancel the pending timer. Invalid required joints or invalid body scale also return <code>None</code>, but first reset the phase to UNKNOWN. These two cases have different effects.</p></div></section><section id="memory"><h2>What the counter keeps in memory</h2><div class="table-wrap"><table><thead><tr><th>Plain name in this guide</th><th>Python name</th><th>Meaning</th></tr></thead><tbody>
+<tr><td>stable_phase</td><td><code>self.state</code></td><td>Last confirmed phase; starts UNKNOWN.</td></tr>
+<tr><td>rep_count</td><td><code>self.rep_count</code></td><td>Number of completed cycles.</td></tr>
+<tr><td>pending_posture</td><td><code>self.pending</code></td><td>The posture whose matching observations are being timed.</td></tr>
+<tr><td>pending_start_time</td><td><code>self.pending_since</code></td><td>The timestamp of the first observation in that matching run.</td></tr>
+<tr><td>current_posture</td><td><code>posture</code></td><td>A temporary variable for just this packet.</td></tr>
+</tbody></table></div><div class="formula">RESET_PHASE():
+    stable_phase = UNKNOWN
+    pending_posture = NOTHING
+    # Preserve rep_count.</div><p>Here <code>NO_POSTURE</code> and <code>NOTHING</code> both represent Python's <code>None</code>. They are plain-language names; they are not extra production states.</p></section><section id="measurements"><h2>The actual measurements and thresholds</h2>
+<p>The input is <code>pose[joint] = [x, y, confidence]</code>. x is a fraction of the original image width; y is a fraction of the original image height. <strong>Smaller y is higher in the picture.</strong> The app uses shoulders (5, 6), wrists (9, 10), and ankles (15, 16). Left and right are the person's anatomical sides.</p>
+<div class="formula">width  = abs(left_shoulder.x - right_shoulder.x)
+span   = average(ankle.y) - average(shoulder.y)
+feet   = abs(left_ankle.x - right_ankle.x) / width
+left   = left_wrist.y - left_shoulder.y
+right  = right_wrist.y - right_shoulder.y
+margin = 0.10 * span</div>
+<p><code>height</code> in the actual code is the vertical shoulder-to-ankle span above. It is a 2D image measurement. <code>width</code> is measured from every current pose; there is no fixed shoulder width of 0.2.</p>
+<div class="table-wrap"><table><caption>All conditions in one posture's column must pass in the same sample.</caption><thead><tr><th>Test</th><th>CLOSED: hands down, feet narrow</th><th>OPEN: hands up, feet wide</th></tr></thead><tbody>
+<tr><th>Left wrist</th><td><code>left &gt; +margin</code></td><td><code>left &lt; -margin</code></td></tr>
+<tr><th>Right wrist</th><td><code>right &gt; +margin</code></td><td><code>right &lt; -margin</code></td></tr>
+<tr><th>Feet</th><td><code>feet ≤ 1.0</code></td><td><code>feet ≥ 1.4</code></td></tr>
+</tbody></table></div>
+<p>Each of the six joints needs finite x, y and confidence, with confidence ≥ 0.5. Body scale also needs <code>width ≥ 0.01</code> and <code>span &gt; 0</code>. Wrist boundaries are strict; foot boundaries are inclusive.</p>
+<details><summary>See one easy numerical example</summary><p>Example shoulders: x = 0.4 and 0.6; both y = 0.4. Example ankles: both y = 0.9. This gives width 0.2, span 0.5 and margin 0.05. These are synthetic example measurements, not fixed settings.</p><ul>
+<li>Hands up: both wrist y values must be below 0.35 numerically, meaning physically above the limit in the image.</li>
+<li>Hands down: both wrist y values must be greater than 0.45.</li>
+<li>Feet open: horizontal ankle separation must be at least 0.28 (= 1.4 × 0.2).</li>
+<li>Feet closed: separation must be at most 0.20 (= 1.0 × 0.2).</li>
+<li>Hands up with feet ratio 1.2 satisfies neither complete posture. The stable phase is preserved; the candidate timer is canceled.</li></ul><p>Production poses are float32; values extremely close to a boundary can be affected by rounding.</p></details></section><section id="check-posture"><h2>Part A: describe one sample</h2><p>This answers only the geometry question. Read each IF as “is this whole condition true?” Read RETURN as “stop this function and give back this answer.”</p><pre><code>FUNCTION CHECK_POSTURE(pose):
+    IF any of the six required joints is nonfinite or has confidence &lt; 0.5:
+        RESET_PHASE()                 # forget the interrupted cycle
+        RETURN NO_POSTURE
+
+    shoulder_width = abs(left shoulder x - right shoulder x)
+    body_span = mean ankle y - mean shoulder y
+    IF shoulder_width &lt; 0.01 OR body_span &lt;= 0:
+        RESET_PHASE()
+        RETURN NO_POSTURE
+
+    feet_ratio = abs(left ankle x - right ankle x) / shoulder_width
+    left_delta = left wrist y - left shoulder y
+    right_delta = right wrist y - right shoulder y
+    margin = 0.10 * body_span
+
+    IF left_delta &gt; margin AND right_delta &gt; margin AND feet_ratio &lt;= 1.0:
+        RETURN CLOSED
+
+    IF left_delta &lt; -margin AND right_delta &lt; -margin AND feet_ratio &gt;= 1.4:
+        RETURN OPEN
+
+    RETURN NO_POSTURE                 # valid intermediate: preserve phase</code></pre><p>The first two failure branches call RESET_PHASE. The final branch does not. That is why unreliable joints and a normal in-between motion have different effects.</p></section><section id="process-packet"><h2>Part B: confirm, remember, and count</h2><p>This procedure runs once per packet the worker receives. Matching observations are timed using the packet timestamp. All early returns occur before the counting step.</p><pre><code>FUNCTION PROCESS_ONE_PACKET(packet):
+    IF packet.frame &lt;= last_processed_frame:
+        RETURN rep_count              # old or duplicate work
+
+    IF packet.generation changed OR packet.selected_id changed:
+        RESET_PHASE()
+        rep_count = packet.accepted_reps
+    ELSE IF a previous timestamp exists
+            AND time since the previous packet is outside [0, 0.5 seconds]:
+        RESET_PHASE()                 # keep the repetition total
+
+    REMEMBER packet generation, selected ID, timestamp, and frame number
+
+    IF packet says the selected person is absent:
+        RESET_PHASE()
+        RETURN rep_count
+
+    current_posture = CHECK_POSTURE(packet.pose)
+    IF current_posture is NO_POSTURE:
+        pending_posture = NOTHING
+        RETURN rep_count
+
+    IF current_posture differs from pending_posture:
+        pending_posture = current_posture
+        pending_start_time = packet.timestamp
+
+    IF packet.timestamp - pending_start_time &lt; 0.06 seconds:
+        RETURN rep_count              # not confirmed yet
+
+    # From here, the current posture is confirmed.
+    IF stable_phase is UNKNOWN:
+        IF current_posture is CLOSED:
+            stable_phase = CLOSED     # now the cycle is armed
+        # Confirmed OPEN leaves UNKNOWN unchanged.
+
+    ELSE IF current_posture differs from stable_phase:
+        IF stable_phase is OPEN AND current_posture is CLOSED:
+            rep_count = rep_count + 1 # the only increment in this function
+        stable_phase = current_posture
+
+    RETURN rep_count</code></pre><div class="callout"><p><strong>Only one line increases the count.</strong> It is reached after the posture is confirmed and only when the remembered phase was OPEN and the new posture is CLOSED.</p></div></section><section id="worked-example"><h2>One whole rep, observation by observation</h2><p>Start with zero reps and an UNKNOWN phase. Keep the same person, valid joints and normal sample gaps. Send three CLOSED samples, three OPEN samples, then three CLOSED samples.</p><div class="table-wrap"><table><caption>Actual Python counter results from synthetic poses sampled 40 ms apart.</caption><thead><tr><th>Time</th><th>Current posture</th><th>Candidate duration</th><th>Stable phase</th><th>Reps</th><th>Why?</th></tr></thead><tbody><tr><td>0.00 s</td><td><span class="state closed">CLOSED</span></td><td>0 ms</td><td><span class="state unknown">UNKNOWN</span></td><td>0</td><td>CLOSED candidate starts. 0 ms is too short.</td></tr><tr><td>0.04 s</td><td><span class="state closed">CLOSED</span></td><td>40 ms</td><td><span class="state unknown">UNKNOWN</span></td><td>0</td><td>Same candidate for 40 ms. Still below 60 ms.</td></tr><tr><td>0.08 s</td><td><span class="state closed">CLOSED</span></td><td>80 ms</td><td><span class="state closed">CLOSED</span></td><td>0</td><td>CLOSED is confirmed: cycle armed.</td></tr><tr><td>0.12 s</td><td><span class="state open">OPEN</span></td><td>0 ms</td><td><span class="state closed">CLOSED</span></td><td>0</td><td>OPEN candidate starts. 0 ms is too short.</td></tr><tr><td>0.16 s</td><td><span class="state open">OPEN</span></td><td>40 ms</td><td><span class="state closed">CLOSED</span></td><td>0</td><td>Same candidate for 40 ms. Still below 60 ms.</td></tr><tr><td>0.20 s</td><td><span class="state open">OPEN</span></td><td>80 ms</td><td><span class="state open">OPEN</span></td><td>0</td><td>OPEN is confirmed: wait for CLOSED to finish.</td></tr><tr><td>0.24 s</td><td><span class="state closed">CLOSED</span></td><td>0 ms</td><td><span class="state open">OPEN</span></td><td>0</td><td>CLOSED candidate starts. 0 ms is too short.</td></tr><tr><td>0.28 s</td><td><span class="state closed">CLOSED</span></td><td>40 ms</td><td><span class="state open">OPEN</span></td><td>0</td><td>Same candidate for 40 ms. Still below 60 ms.</td></tr><tr><td>0.32 s</td><td><span class="state closed">CLOSED</span></td><td>80 ms</td><td><span class="state closed">CLOSED</span></td><td>1</td><td>OPEN → CLOSED is confirmed. Add 1 rep.</td></tr></tbody></table></div><p><strong>The count stays at zero until 0.32 s.</strong> The first CLOSED run arms the cycle. The OPEN run opens it. The final CLOSED run finishes it. Staying CLOSED afterward does not add another rep.</p><p class="small">40 ms is the chosen example interval. The code uses elapsed packet timestamps, not a fixed number of frames. At another sample rate the number of samples needed can differ. The timer remains stored after confirmation until a new candidate or reset changes it.</p></section><section id="practice"><h2>Check your understanding</h2>
+<details><summary>First sample is OPEN. Does the phase become OPEN?</summary><p>No. The phase starts UNKNOWN. Even a confirmed OPEN run leaves it UNKNOWN. A confirmed CLOSED run must arm it first.</p></details>
+<details><summary>Stable phase is OPEN. A valid in-between pose arrives. Does it reset?</summary><p>No. CHECK_POSTURE returns NO_POSTURE without resetting. PROCESS_ONE_PACKET clears pending. Stable phase remains OPEN. A later confirmed CLOSED run can finish the rep.</p></details>
+<details><summary>Stable phase is OPEN. An ankle has confidence 0.2. Does the next CLOSED run finish that rep?</summary><p>No. The invalid ankle resets the phase to UNKNOWN. The next confirmed CLOSED run only arms a new cycle. OPEN and then CLOSED are still needed.</p></details>
+<details><summary>Why does CLOSED for another 60 ms not add a second rep?</summary><p>The stable phase is already CLOSED. There is no OPEN → CLOSED transition, so the increment condition is false.</p></details>
+</section><section id="resets"><h2>What stops or resets a cycle?</h2><div class="table-wrap"><table><thead><tr><th>What arrives?</th><th>Stable phase</th><th>Repetition count</th></tr></thead><tbody>
+<tr><td>Duplicate / older frame number</td><td>Leave everything unchanged; ignore the packet.</td><td>Unchanged.</td></tr>
+<tr><td>Different selected ID or continuity generation</td><td>Reset to UNKNOWN, then process this packet.</td><td>Replace the worker's count with <code>packet.accepted_reps</code>.</td></tr>
+<tr><td>Same continuity, sample gap outside [0, 0.5 s]</td><td>Reset to UNKNOWN, then process this packet.</td><td>Preserve total.</td></tr>
+<tr><td>Selected person absent; bad required joint; invalid width or span</td><td>Reset to UNKNOWN; clear pending.</td><td>Preserve total after any identity reseeding.</td></tr>
+<tr><td>Valid intermediate posture</td><td>Keep the stable phase; clear pending.</td><td>Preserve total.</td></tr></tbody></table></div>
+<p>A generation is the main controller's continuity marker. It changes on selection, loss and recovery, even if the tracker ID is unchanged. After a reset the person must establish CLOSED again before another full cycle can count.</p>
+<div class="callout"><p><code>reset_phase()</code> does not zero the count. It changes only the stable phase and pending candidate. Identity/generation changes separately reseed the count from the main process's accepted total.</p></div></section>
+<footer>Source: <a href="../workout/analysis/jumping_jack.py">workout/analysis/jumping_jack.py</a>, with <a href="../workout/packets.py">packets.py</a> and <a href="../workout/tracking.py">tracking.py</a>. <a href="jumping_jack_analysis.html">Full reference guide</a>.<br>This is a snapshot of the 2D posture heuristic. The code does not check airtime or certify exercise form. Every illustration uses synthetic examples; application behavior is unchanged.<br>Counter SHA-256: <span class="hash">BFB332CB05A23E443FAC8EA314898126BE6E600031E0F9DC4DB88C5A63302016</span>. Everything needed to read this guide is embedded; no internet connection is required.</footer></main></body></html>

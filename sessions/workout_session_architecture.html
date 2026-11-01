@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Source-backed system architecture of PoseSense workout_session.py, its live runtime, CPU analysis process, recordings, and offline tools.">
+  <title>PoseSense · Workout session architecture</title>
+  <style>
+    :root { color-scheme: light; --ink:#17293d; --muted:#53677c; --line:#d8e1ea; --blue:#2563eb; --green:#168055; --gold:#a26913; --paper:#fff; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; background:#f4f6f9; color:var(--ink); font:15px/1.6 "Segoe UI",system-ui,sans-serif; }
+    main { max-width:1392px; margin:auto; padding:42px 38px 32px; }
+    a { color:#2356ba; text-decoration-thickness:1px; text-underline-offset:3px; }
+    button { font:inherit; cursor:pointer; }
+    button:focus-visible, a:focus-visible, summary:focus-visible { outline:3px solid var(--blue); outline-offset:4px; }
+    .eyebrow { font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+    .masthead { display:flex; align-items:flex-start; justify-content:space-between; gap:28px; }
+    h1 { margin:8px 0 10px; font-size:clamp(29px,3.4vw,44px); line-height:1.15; letter-spacing:-.035em; font-weight:650; }
+    .intro { max-width:790px; margin:0; font-size:16px; color:var(--muted); }
+    .intro code { font-size:15px; color:var(--ink); }
+    .print { background:white; border:1px solid var(--line); border-radius:8px; padding:8px 15px; white-space:nowrap; }
+    .facts { display:flex; flex-wrap:wrap; gap:12px 34px; margin:22px 0 26px; color:var(--muted); font-size:13px; }
+    .facts strong { font-size:19px; font-weight:650; color:var(--ink); margin-right:5px; }
+    .board { background:white; border:1px solid var(--line); border-radius:14px; overflow:hidden; box-shadow:0 5px 22px #182b4510; }
+    .toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; padding:15px 19px; border-bottom:1px solid var(--line); }
+    .tabs { display:flex; flex-wrap:wrap; gap:5px; }
+    .tabs button { color:var(--muted); border:1px solid transparent; border-radius:7px; background:transparent; padding:6px 12px; font-size:13px; font-weight:600; }
+    .tabs button[aria-pressed="true"] { background:#eaf1ff; border-color:#cadbff; color:#1d4dad; }
+    .legend { display:flex; flex-wrap:wrap; gap:15px; color:var(--muted); font-size:11px; }
+    .legend span { display:flex; align-items:center; gap:6px; }
+    .legend i { width:18px; height:0; border-top:2px solid var(--blue); }
+    .legend .feedback { border-color:var(--green); }
+    .legend .persist { border-color:var(--gold); border-top-style:dashed; }
+    .diagram-scroll { overflow-x:auto; background:#fcfdff; }
+    .architecture { width:100%; min-width:1040px; height:auto; display:block; }
+    .architecture text { font-family:"Segoe UI",system-ui,sans-serif; fill:var(--ink); }
+    .architecture .lane-title { font-size:13px; font-weight:700; letter-spacing:1px; }
+    .architecture .lane-note { fill:var(--muted); font-size:12px; }
+    .architecture .node-title { font-size:16px; font-weight:650; }
+    .architecture .node-file { font-family:Consolas,"Cascadia Code",monospace; font-size:12px; fill:var(--muted); }
+    .architecture .node-copy { font-size:13px; fill:#465b70; }
+    .architecture .node-kicker { font-size:10px; font-weight:700; fill:#426cae; letter-spacing:.8px; }
+    .architecture .edge-label { font-size:11px; fill:#4e6581; paint-order:stroke; stroke:#fcfdff; stroke-width:5px; stroke-linejoin:round; }
+    .architecture .node { cursor:pointer; transition:opacity .18s; }
+    .architecture .node .card { fill:white; stroke:#c7d5e5; stroke-width:1.2; }
+    .architecture .worker-node .card { stroke:#a9cfbd; }
+    .architecture .node:hover .card, .architecture .node:focus .card { stroke:#2563eb; stroke-width:2.5; }
+    .architecture .node:focus { outline:none; }
+    .architecture .node.selected .card { stroke:#2563eb; stroke-width:2.5; }
+    .architecture .edge { fill:none; stroke:#4974b4; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .architecture .edge.feedback { stroke:var(--green); }
+    .architecture .edge.persist { stroke:var(--gold); stroke-dasharray:6 5; }
+    .architecture .dim { opacity:.17; }
+    .diagram-caption { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; margin:0; padding:11px 19px; border-top:1px solid var(--line); color:var(--muted); font-size:12px; }
+    .mobile-note { display:none; }
+    .underboard { display:grid; grid-template-columns:1fr 1.1fr; gap:20px; margin-top:20px; }
+    .panel { background:white; border:1px solid var(--line); border-radius:12px; padding:22px 24px; }
+    h2 { margin:0 0 8px; font-size:21px; font-weight:650; letter-spacing:-.02em; }
+    h3 { margin:0 0 7px; font-size:16px; font-weight:650; }
+    p { margin:0 0 12px; }
+    .panel p:last-child { margin-bottom:0; }
+    code { font-family:Consolas,"Cascadia Code",monospace; font-size:.9em; overflow-wrap:anywhere; }
+    .detail-path { margin:4px 0 14px; font-size:12px; }
+    .detail-body { color:var(--muted); font-size:14px; min-height:106px; }
+    .detail-body ul { padding-left:19px; margin:8px 0 0; }
+    .detail-body li { margin:4px 0; }
+    .detail-contract { margin-top:17px; padding-top:14px; border-top:1px solid var(--line); font-size:13px; color:var(--muted); }
+    .detail-contract strong { color:var(--ink); }
+    .principles { display:grid; gap:14px; }
+    .principle { display:grid; grid-template-columns:27px 1fr; gap:10px; }
+    .principle .number { font-size:12px; font-weight:700; color:var(--blue); padding-top:2px; }
+    .principle p { color:var(--muted); font-size:13px; margin:3px 0 0; }
+    .lifecycle { margin-top:20px; }
+    .section-head { display:flex; align-items:baseline; justify-content:space-between; gap:20px; margin-bottom:18px; }
+    .section-head p { font-size:13px; color:var(--muted); margin:0; }
+    .state-row { display:flex; align-items:center; gap:15px; }
+    .state { flex:1; border:1px solid var(--line); border-radius:9px; padding:14px 16px; background:#f8fafc; min-width:0; }
+    .state strong { display:block; font:600 13px Consolas,monospace; }
+    .state small { display:block; font-size:12px; color:var(--muted); margin-top:5px; }
+    .state.active { border-color:#b9cfff; background:#f1f6ff; }
+    .state.finished { border-color:#b5d4c4; background:#f3faf6; }
+    .state-arrow { color:var(--blue); font-size:22px; }
+    .loss-row { display:flex; align-items:center; gap:13px; margin-top:12px; padding:12px 16px; border:1px dashed #d9bc86; border-radius:9px; background:#fffbf3; font-size:13px; }
+    .loss-row strong { white-space:nowrap; font-family:Consolas,monospace; color:#8c5b0f; }
+    .loss-row span { color:var(--muted); }
+    .shutdown { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; border-top:1px solid var(--line); margin-top:22px; padding-top:18px; }
+    .shutdown div { color:var(--muted); font-size:12px; }
+    .shutdown strong { display:block; font-size:13px; color:var(--ink); margin-bottom:4px; }
+    .contracts { margin-top:20px; }
+    details { background:white; border:1px solid var(--line); border-radius:10px; }
+    summary { padding:15px 20px; font-weight:650; cursor:pointer; }
+    .contract-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; padding:3px 20px 20px; }
+    .contract-grid p { color:var(--muted); font-size:13px; }
+    .contract-grid pre { white-space:pre-wrap; margin:10px 0 0; color:#344d65; background:#f3f6fa; border-radius:7px; padding:12px; font:12px/1.6 Consolas,monospace; }
+    .tools { margin-top:20px; }
+    .tool-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    .tool { border-top:1px solid var(--line); padding-top:13px; }
+    .tool p { font-size:13px; color:var(--muted); margin:6px 0 0; }
+    .source-table { overflow-x:auto; margin-top:20px; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th { text-align:left; background:#f3f6fa; color:#435b72; padding:10px 13px; font-size:11px; text-transform:uppercase; letter-spacing:.06em; }
+    td { border-top:1px solid #e8edf3; padding:9px 13px; vertical-align:top; }
+    td:first-child { width:31%; }
+    td:last-child { width:18%; color:var(--muted); }
+    footer { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; padding:22px 2px 0; font-size:12px; color:var(--muted); }
+    noscript p { padding:12px 20px; color:var(--muted); background:#fff8df; margin:0; }
+    @media (max-width:850px) {
+      main { padding:26px 16px; }
+      .underboard, .tool-grid, .contract-grid { grid-template-columns:1fr; }
+      .masthead { gap:12px; }
+      .print { padding:7px 10px; font-size:12px; }
+      .facts { gap:9px 20px; }
+      .section-head { display:block; }
+      .state-row { gap:7px; }
+      .state { padding:11px 9px; }
+      .state strong { font-size:11px; }
+      .state small { font-size:11px; }
+      .state-arrow { font-size:17px; }
+      .loss-row { display:block; }
+      .loss-row span { display:block; margin-top:5px; }
+      .shutdown { grid-template-columns:1fr 1fr; }
+      .panel { padding:19px; }
+      .mobile-note { display:inline; }
+    }
+    @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } .architecture .node { transition:none; } }
+    @media (max-width:550px) {
+      .state-row { flex-direction:column; align-items:stretch; }
+      .state strong { font-size:13px; }
+      .state-arrow { align-self:center; transform:rotate(90deg); line-height:1; }
+    }
+    @media print {
+      @page { size:A3 portrait; margin:12mm; }
+      body { background:white; }
+      main { max-width:none; padding:0; }
+      .print,.tabs,.mobile-note { display:none; }
+      .board { box-shadow:none; break-inside:avoid; }
+      .diagram-scroll { overflow:visible; }
+      .architecture { min-width:0; }
+      .architecture .dim { opacity:1; }
+      .panel,details { break-inside:avoid; }
+      .underboard { grid-template-columns:1fr 1fr; }
+      .source-table { overflow:visible; }
+      a { color:inherit; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="masthead">
+      <div>
+        <div class="eyebrow">PoseSense / System overview</div>
+        <h1>Workout session architecture</h1>
+        <p class="intro"><code>workout_session.py</code> coordinates a live pose pipeline, a separate repetition counter, and a keypoint recording. Follow the arrows to see where data moves and which process owns each responsibility.</p>
+      </div>
+      <button class="print" id="print-button" type="button">Print / PDF</button>
+    </div>
+    <div class="facts" aria-label="Architecture at a glance">
+      <span><strong>2</strong> runtime processes</span>
+      <span><strong>1</strong> tracking call per camera frame</span>
+      <span><strong>17 × 3</strong> pose values</span>
+      <span><strong>180 s</strong> session clock</span>
+    </div>
+  </header>
+
+  <section class="board" aria-label="Interactive architecture diagram">
+    <div class="toolbar">
+      <div class="tabs" role="group" aria-label="Highlight a data flow">
+        <button type="button" data-mode="all" aria-pressed="true">All flows</button>
+        <button type="button" data-mode="live" aria-pressed="false">Live frame</button>
+        <button type="button" data-mode="analysis" aria-pressed="false">Rep analysis</button>
+        <button type="button" data-mode="save" aria-pressed="false">Save &amp; replay</button>
+      </div>
+      <div class="legend" aria-label="Connection legend">
+        <span><i></i>Pose / display data</span>
+        <span><i class="feedback"></i>Analysis feedback</span>
+        <span><i class="persist"></i>Saved data</span>
+      </div>
+    </div>
+    <noscript><p>The diagram and source index are complete without JavaScript. Enable JavaScript to select modules and highlight individual flows.</p></noscript>
+    <div class="diagram-scroll" tabindex="0" aria-label="Architecture canvas; scroll horizontally on small screens">
+      <svg class="architecture" viewBox="0 0 1320 806" xmlns="http://www.w3.org/2000/svg" role="group" aria-labelledby="diagram-title diagram-desc">
+        <title id="diagram-title">Workout session process and data-flow architecture</title>
+        <desc id="diagram-desc">In the main process, OpenCV captures a frame, YOLO tracks poses, tracking.py extracts normalized people, and SessionController selects and times the workout. A latest-value mailbox sends the selected pose to a spawned CPU worker. JumpingJackCounter returns status through a second mailbox. Accepted state feeds the display. Recording and persistence steps are collapsed into the dashed saved-pose path to offline playback and debugging. Select a component to read its responsibility below.</desc>
+        <defs>
+          <pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".8" fill="#e5ebf3"/></pattern>
+          <marker id="arrow-blue" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#4974b4"/></marker>
+          <marker id="arrow-green" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#168055"/></marker>
+          <marker id="arrow-gold" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#a26913"/></marker>
+        </defs>
+        <rect width="1320" height="806" fill="url(#dots)"/>
+        <rect x="20" y="20" width="850" height="576" rx="12" fill="#f3f7fd" stroke="#cbd9ed"/>
+        <text class="lane-title" x="44" y="49">MAIN PROCESS</text>
+        <text class="lane-note" x="44" y="67">Camera, inference, session authority, and UI</text>
+        <rect x="892" y="20" width="408" height="576" rx="12" fill="#f1f9f5" stroke="#b8d9c8"/>
+        <text class="lane-title" x="916" y="49">CPU ANALYSIS PROCESS</text>
+        <text class="lane-note" x="916" y="67">multiprocessing “spawn” · small CPU packets</text>
+        <rect x="20" y="620" width="1280" height="166" rx="12" fill="#f7f8fb" stroke="#d5dce6"/>
+        <text class="lane-title" x="44" y="647">OFFLINE CONSUMERS</text>
+        <text class="lane-note" x="930" y="647">Separate programs · saved poses as input</text>
+
+        <!-- Arrows show data movement; recording and persistence are collapsed. -->
+        <g class="flow" data-modes="live">
+          <path class="edge" d="M236 139H270" marker-end="url(#arrow-blue)"/>
+          <path class="edge" d="M525 139H560" marker-end="url(#arrow-blue)"/>
+          <path class="edge" d="M703 194V252" marker-end="url(#arrow-blue)"/>
+          <text class="edge-label" x="715" y="228">TrackedPerson[]</text>
+          <path class="edge" d="M525 318H560" marker-end="url(#arrow-blue)"/>
+          <path class="edge" d="M397 194V222H32V426H204V454" marker-end="url(#arrow-blue)"/>
+          <text class="edge-label" x="74" y="443">YOLO result → video overlay</text>
+        </g>
+        <g class="flow" data-modes="live analysis">
+          <path class="edge" d="M703 384V454" marker-end="url(#arrow-blue)"/>
+          <text class="edge-label" x="715" y="425">accepted state + pose</text>
+        </g>
+        <g class="flow" data-modes="analysis">
+          <path class="edge" d="M846 291H880V132H916" marker-end="url(#arrow-blue)"/>
+          <path class="edge" d="M1096 177V228" marker-end="url(#arrow-blue)"/>
+          <text class="edge-label" x="1108" y="206">read newest pose</text>
+          <path class="edge feedback" d="M1096 330V382" marker-end="url(#arrow-green)"/>
+          <text class="edge-label" x="1108" y="360">AnalysisStatus</text>
+          <path class="edge feedback" d="M916 430H885V352H846" marker-end="url(#arrow-green)"/>
+        </g>
+        <g class="flow" data-modes="save">
+          <path class="edge persist" d="M846 374H876V665H344V690" marker-end="url(#arrow-gold)"/>
+          <path class="edge persist" d="M876 665H976V690" marker-end="url(#arrow-gold)"/>
+          <text class="edge-label" x="893" y="609">Saved poses · after shutdown</text>
+        </g>
+
+        <g class="node" data-node="camera" data-modes="live" tabindex="0" role="button" aria-label="Inspect OpenCV camera capture" aria-pressed="false">
+          <rect class="card" x="44" y="84" width="192" height="110" rx="8"/>
+          <text class="node-kicker" x="61" y="107">INPUT</text>
+          <text class="node-title" x="61" y="130">Camera capture</text>
+          <text class="node-file" x="61" y="152">cv2.VideoCapture</text>
+          <text class="node-copy" x="61" y="175">BGR image per frame</text>
+        </g>
+        <g class="node" data-node="model" data-modes="live" tabindex="0" role="button" aria-label="Inspect YOLO inference and tracking" aria-pressed="false">
+          <rect class="card" x="270" y="84" width="255" height="110" rx="8"/>
+          <text class="node-kicker" x="288" y="107">GPU OR CPU</text>
+          <text class="node-title" x="288" y="130">YOLO pose + tracking</text>
+          <text class="node-file" x="288" y="152">yolo26m-pose.pt</text>
+          <text class="node-copy" x="288" y="175">model.track(persist=True)</text>
+        </g>
+        <g class="node" data-node="tracking" data-modes="live" tabindex="0" role="button" aria-label="Inspect workout/tracking.py" aria-pressed="false">
+          <rect class="card" x="560" y="84" width="286" height="110" rx="8"/>
+          <text class="node-title" x="578" y="113">Tracker integration</text>
+          <text class="node-file" x="578" y="135">workout/tracking.py</text>
+          <text class="node-copy" x="578" y="158">FastTrack → ByteTrack fallback</text>
+          <text class="node-copy" x="578" y="179">IDs + normalized CPU poses</text>
+        </g>
+        <g class="node" data-node="gesture" data-modes="live" tabindex="0" role="button" aria-label="Inspect workout/gesture.py" aria-pressed="false">
+          <rect class="card" x="44" y="262" width="481" height="111" rx="8"/>
+          <text class="node-title" x="62" y="289">Gesture selection</text>
+          <text class="node-file" x="62" y="311">workout/gesture.py</text>
+          <text class="node-copy" x="62" y="334">Right hand: 2 s to start</text>
+          <text class="node-copy" x="62" y="356">1 s to choose a replacement</text>
+        </g>
+        <g class="node selected" data-node="session" data-modes="live analysis save" tabindex="0" role="button" aria-label="Inspect SessionController in workout/session.py" aria-pressed="true">
+          <rect class="card" x="560" y="252" width="286" height="132" rx="8"/>
+          <rect x="560" y="265" width="4" height="106" rx="2" fill="#2563eb"/>
+          <text class="node-title" x="578" y="279">SessionController</text>
+          <text class="node-file" x="578" y="301">workout/session.py</text>
+          <text class="node-copy" x="578" y="324">Selection · 180 s clock · continuity</text>
+          <text class="node-copy" x="578" y="346">Accept current-generation status</text>
+          <text class="node-copy" x="578" y="368">Build PosePacket + own live count</text>
+        </g>
+        <g class="node" data-node="display" data-modes="live analysis" tabindex="0" role="button" aria-label="Inspect live display and HUD" aria-pressed="false">
+          <rect class="card" x="44" y="454" width="802" height="130" rx="8"/>
+          <text class="node-title" x="62" y="481">Live display / OpenCV window</text>
+          <text class="node-file" x="62" y="503">workout/live_display.py + runtime HUD</text>
+          <text class="node-copy" x="62" y="527">Video: result.plot() + timing + session overlays</text>
+          <text class="node-copy" x="62" y="549">Skeleton: selected pose + current threshold checks</text>
+          <text class="node-copy" x="62" y="571">V switches view · Q / Esc exits · --headless hides window</text>
+        </g>
+        <g class="node worker-node" data-node="pose-mailbox" data-modes="analysis" tabindex="0" role="button" aria-label="Inspect pose latest-value mailbox" aria-pressed="false">
+          <rect class="card" x="916" y="84" width="360" height="93" rx="8"/>
+          <text class="node-title" x="934" y="110">Latest pose mailbox</text>
+          <text class="node-file" x="934" y="132">workout/analysis/worker.py</text>
+          <text class="node-copy" x="934" y="155">PosePacket · main → worker · one shared slot</text>
+        </g>
+        <g class="node worker-node" data-node="counter" data-modes="analysis" tabindex="0" role="button" aria-label="Inspect JumpingJackCounter in workout/analysis/jumping_jack.py" aria-pressed="false">
+          <rect class="card" x="916" y="228" width="360" height="102" rx="8"/>
+          <text class="node-title" x="934" y="254">JumpingJackCounter</text>
+          <text class="node-file" x="934" y="276">workout/analysis/jumping_jack.py</text>
+          <text class="node-copy" x="934" y="299">CLOSED → OPEN → CLOSED = +1 rep</text>
+          <text class="node-copy" x="934" y="319">60 ms confirmation · 0.5 s maximum gap</text>
+        </g>
+        <g class="node worker-node" data-node="status-mailbox" data-modes="analysis" tabindex="0" role="button" aria-label="Inspect analysis status latest-value mailbox" aria-pressed="false">
+          <rect class="card" x="916" y="382" width="360" height="102" rx="8"/>
+          <text class="node-title" x="934" y="409">Latest status mailbox</text>
+          <text class="node-file" x="934" y="431">workout/analysis/worker.py</text>
+          <text class="node-copy" x="934" y="454">Count, phase, frame, generation, health</text>
+          <text class="node-copy" x="934" y="475">worker → main · poll without waiting</text>
+        </g>
+        <text class="lane-note" x="916" y="523">Two 8 KiB slots · nonblocking lock attempts</text>
+        <text class="lane-note" x="916" y="549">The main loop does not wait for analysis.</text>
+        <g class="node" data-node="playback" data-modes="save" tabindex="0" role="button" aria-label="Inspect sessions/playback.py" aria-pressed="false">
+          <rect class="card" x="44" y="690" width="600" height="76" rx="8"/>
+          <text class="node-title" x="62" y="713">Skeleton playback</text>
+          <text class="node-file" x="62" y="734">sessions/playback.py</text>
+          <text class="node-copy" x="62" y="754">Load NPZ · seek / step / change speed · show recorded live counts</text>
+        </g>
+        <g class="node" data-node="debug" data-modes="save" tabindex="0" role="button" aria-label="Inspect sessions/debug.py" aria-pressed="false">
+          <rect class="card" x="674" y="690" width="602" height="76" rx="8"/>
+          <text class="node-title" x="692" y="713">Threshold and phase debugger</text>
+          <text class="node-file" x="692" y="734">sessions/debug.py</text>
+          <text class="node-copy" x="692" y="754">Replay counter · inspect gates and resets · tune offline configuration</text>
+        </g>
+      </svg>
+    </div>
+    <p class="diagram-caption"><span id="flow-caption" aria-live="polite">All flows · select a component to inspect its responsibilities below.</span><span class="mobile-note">Swipe the diagram horizontally.</span><span>Recording and persistence steps are collapsed in the dashed path.</span></p>
+  </section>
+
+  <div class="underboard">
+    <section class="panel" id="component-details" aria-label="Selected component details">
+      <div class="eyebrow">Component inspector</div>
+      <h2 id="detail-title">Session authority</h2>
+      <div class="detail-path" id="detail-source"><a href="../workout/session.py"><code>workout/session.py</code></a> · <a href="../workout/packets.py"><code>workout/packets.py</code></a></div>
+      <div class="detail-body" id="detail-body" aria-live="polite">
+        <p><code>SessionController</code> owns WAITING, ACTIVE_TRACKED, ACTIVE_LOST, and FINISHED, plus the selected ID and 180-second timer.</p>
+        <ul><li>Selection, loss, and recovery update the continuity generation.</li><li>Status must match the generation, be newer than the last accepted status, and not be ahead of the last submitted frame.</li><li>It creates the selected <code>PosePacket</code>, appends it to the recorder, and returns it for publication.</li><li>Loss records an absent pose and keeps the timer running.</li></ul>
+      </div>
+      <p class="detail-contract" id="detail-contract"><strong>Boundary:</strong> Only accepted status updates the main-process rep count and exercise phase; error status is rejected.</p>
+    </section>
+    <section class="panel" aria-label="Architecture invariants">
+      <div class="eyebrow">Why the boundaries matter</div>
+      <h2>Three rules hold the system together</h2>
+      <div class="principles">
+        <div class="principle"><span class="number">01</span><div><h3>Record before publishing</h3><p><code>SessionController.process_frame()</code> appends the active pose to its recorder before <code>worker.publish()</code>. Mailbox overwrites affect analysis coverage, while the recorded history keeps that frame.</p></div></div>
+        <div class="principle"><span class="number">02</span><div><h3>The main loop does not wait for analysis</h3><p>Each mailbox has one shared slot. Unread values may be replaced; lock contention drops an incoming value. Worker failure is reported while pose recording continues.</p></div></div>
+        <div class="principle"><span class="number">03</span><div><h3>Continuity protects the accepted count</h3><p>Selection, loss, and recovery advance a generation. The main process rejects stale or incompatible status; the worker resets its partial cycle and uses the accepted rep baseline.</p></div></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel lifecycle" id="lifecycle" aria-label="Session states and shutdown lifecycle">
+    <div class="section-head"><h2>Session lifecycle</h2><p><a href="../workout/session.py"><code>workout/session.py</code></a> owns state and monotonic time.</p></div>
+    <div class="state-row">
+      <div class="state"><strong>WAITING</strong><small>Observe candidates; right-hand hold for 2 s selects an ID.</small></div>
+      <span class="state-arrow" aria-hidden="true">→</span>
+      <div class="state active"><strong>ACTIVE_TRACKED</strong><small>Clock runs; append each active pose; accept valid status.</small></div>
+      <span class="state-arrow" aria-hidden="true">→</span>
+      <div class="state finished"><strong>FINISHED</strong><small>180 s reached, or active session stopped; final save.</small></div>
+    </div>
+    <div class="loss-row"><strong>ACTIVE_TRACKED ⇄ ACTIVE_LOST</strong><span>Loss keeps the clock running, freezes the accepted count, and records a missing pose. The same ID can return; a different ID requires a 1 s right-hand gesture. Loss and recovery reset continuity.</span></div>
+    <div class="shutdown" aria-label="Shutdown sequence">
+      <div><strong>1 · Freeze the session</strong>Finish the timer and stop appending frames; release the camera.</div>
+      <div><strong>2 · Close the worker</strong>Request stop and drain eligible pending work. Join for 3 s; terminate if necessary, then join for up to 2 s.</div>
+      <div><strong>3 · Persist once</strong>Accept eligible final status; save the NPZ and optional metrics JSON outside the live loop.</div>
+      <div><strong>4 · Finished view</strong>On normal completion, show the frozen final result when a GUI result is available. View switching uses that result.</div>
+    </div>
+  </section>
+
+  <section class="contracts" aria-label="Shared data contracts">
+    <details open>
+      <summary>Data contracts · workout/packets.py</summary>
+      <div class="contract-grid">
+        <div><h3>TrackedPerson</h3><p>A current-frame tracker observation, extracted from the YOLO result. Each pose has 17 COCO joints with normalized x, y, and confidence.</p><pre>track_id: int
+pose: float32[17, 3]</pre></div>
+        <div><h3>PosePacket → worker</h3><p>The selected pose plus its session context. <code>clean_pose()</code> masks unreliable x/y as NaN; an absent person produces an all-NaN pose.</p><pre>frame_index, timestamp
+selected_track_id, pose, present
+generation, accepted_reps</pre></div>
+        <div><h3>AnalysisStatus → main</h3><p>A count and phase proposal tagged with the analyzed frame and generation. The controller checks these tags before accepting the result.</p><pre>rep_count, exercise_state
+last_processed_frame, generation
+processed_packets, error</pre></div>
+      </div>
+    </details>
+  </section>
+
+  <section class="panel tools" aria-label="Companion tooling and source index">
+    <div class="section-head"><h2>Supporting modules and entry points</h2><p>These tools share the runtime or counter; they are separate from the normal live path.</p></div>
+    <div class="tool-grid">
+      <div class="tool"><h3><a href="../benchmark_workout.py">benchmark_workout.py</a> + <a href="../workout/benchmark.py">FrameMetrics</a></h3><p>The wrapper runs the reference or workout variant, optionally feeding scripted session poses after real inference. <code>FrameMetrics</code> collects timings after warmup and writes JSON after shutdown when <code>--metrics</code> is set.</p></div>
+      <div class="tool"><h3><a href="../standard_import.py">standard_import.py</a></h3><p>A separate batch-video path reuses pose extraction and the counter configuration. It exports pose NPZs and JSON / HTML reports under <code>standards/</code> for offline inspection and threshold analysis.</p></div>
+    </div>
+    <div class="source-table">
+      <table>
+        <caption class="eyebrow" style="text-align:left;margin-bottom:10px">Source index · all links point to local files</caption>
+        <thead><tr><th>Source</th><th>Primary responsibility</th><th>Runs in</th></tr></thead>
+        <tbody>
+          <tr><td><a href="../workout_session.py"><code>workout_session.py</code></a></td><td>CLI, runtime loop, model/camera ownership, HUD, cleanup, final screen</td><td>Main process</td></tr>
+          <tr><td><a href="../smoke_pose5.py"><code>smoke_pose5.py</code></a></td><td>Reused device, backend, performance HUD, and display-sizing helpers</td><td>Main process</td></tr>
+          <tr><td><a href="../workout/tracking.py"><code>workout/tracking.py</code></a></td><td>Tracker selection, ID-aligned normalized pose extraction, TrackerTimer</td><td>Main process</td></tr>
+          <tr><td><a href="../workout/session.py"><code>workout/session.py</code></a></td><td>SessionController; selected ID, timer, generation, accepted count, packet creation</td><td>Main process</td></tr>
+          <tr><td><a href="../workout/gesture.py"><code>workout/gesture.py</code></a></td><td>Per-ID right-hand hold detection for start and deliberate replacement</td><td>Main process</td></tr>
+          <tr><td><a href="../workout/recorder.py"><code>workout/recorder.py</code></a></td><td>In-memory per-frame history and atomic compressed NPZ output</td><td>Main process</td></tr>
+          <tr><td><a href="../workout/live_display.py"><code>workout/live_display.py</code></a></td><td>Read-only skeleton rendering, current geometry checks, accepted progress</td><td>Main process</td></tr>
+          <tr><td><a href="../workout/packets.py"><code>workout/packets.py</code></a></td><td>TrackedPerson, PosePacket, AnalysisStatus; COCO indices and pose validation</td><td>Main + worker</td></tr>
+          <tr><td><a href="../workout/analysis/worker.py"><code>workout/analysis/worker.py</code></a></td><td>AnalysisWorker lifecycle, two LatestMailbox slots, analysis_main loop</td><td>Main + worker</td></tr>
+          <tr><td><a href="../workout/analysis/jumping_jack.py"><code>workout/analysis/jumping_jack.py</code></a></td><td>JumpingJackConfig and temporal repetition counter; classifier also reused by UI</td><td>Worker; shared logic</td></tr>
+          <tr><td><a href="../workout/benchmark.py"><code>workout/benchmark.py</code></a></td><td>Optional FrameMetrics timing aggregation and JSON output</td><td>Main process</td></tr>
+          <tr><td><a href="playback.py"><code>sessions/playback.py</code></a></td><td>Read NPZ, animate skeletons, navigate time; display saved counts</td><td>Offline program</td></tr>
+          <tr><td><a href="debug.py"><code>sessions/debug.py</code></a></td><td>Replay counter, inspect geometry and continuity, adjust offline thresholds</td><td>Offline program</td></tr>
+          <tr><td><a href="../benchmark_workout.py"><code>benchmark_workout.py</code></a></td><td>Reference / workout benchmarking and synthetic session instrumentation</td><td>Separate entry point</td></tr>
+          <tr><td><a href="../standard_import.py"><code>standard_import.py</code></a></td><td>Batch-video pose extraction and threshold-analysis exports</td><td>Offline program</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <footer><span>Based on the local source snapshot · 11 October 2026 · HTML, CSS, SVG, and JavaScript are embedded.</span><span><a href="jumping_jack_analysis.html">Exercise algorithm guide</a> · <a href="../README.md">Project README</a></span></footer>
+</main>
+<script>
+(() => {
+  "use strict";
+  const components = {
+    camera: {
+      title: "Camera capture", sources: [["workout_session.py", "../workout_session.py"], ["smoke_pose5.py", "../smoke_pose5.py"]],
+      body: "<p>OpenCV opens the requested camera using the selected MSMF, DirectShow, or automatic backend. Defaults request camera 0 at 1280 × 720 and 30 FPS.</p><ul><li>The main loop reads one BGR image at a time.</li><li>Session time is checked before and after capture so a stalled read cannot extend the recording.</li><li>A failed read ends the loop and triggers cleanup and partial-session saving.</li></ul>",
+      boundary: "Camera frames remain in the main process. The worker receives selected keypoints only."
+    },
+    model: {
+      title: "Pose inference and persistent tracking", sources: [["workout_session.py", "../workout_session.py"], ["workout/tracking.py", "../workout/tracking.py"]],
+      body: "<p>The runtime loads <code>yolo26m-pose.pt</code> once and calls <code>model.track()</code> for each camera frame.</p><ul><li><code>persist=True</code> preserves tracker continuity across frames.</li><li>The runtime requests <code>imgsz=640</code>, <code>quantize=16</code>, and <code>compile=\"reduce-overhead\"</code> by default.</li><li>The result supplies track IDs, poses, timings, and the video-overlay renderer.</li></ul>",
+      boundary: "Device selection supports CUDA or CPU. Model construction is deferred to run(), outside worker import."
+    },
+    tracking: {
+      title: "Tracker integration and pose extraction", sources: [["workout/tracking.py", "../workout/tracking.py"]],
+      body: "<p><code>select_tracker()</code> chooses an installed non-ReID FastTrack configuration, falling back to ByteTrack in automatic mode.</p><ul><li><code>tracked_people()</code> aligns confirmed current-frame IDs with COCO keypoints.</li><li>It extracts only the selected person's pose when that ID is visible; otherwise it extracts gesture candidates.</li><li>Poses become owned CPU float32 arrays with x and y normalized by image dimensions.</li><li><code>TrackerTimer</code> measures the tracking callback for optional metrics.</li></ul>",
+      boundary: "Unconfirmed boxes do not become TrackedPerson observations; small keypoint tensors are transferred to CPU."
+    },
+    gesture: {
+      title: "Right-hand gesture selection", sources: [["workout/gesture.py", "../workout/gesture.py"], ["workout/session.py", "../workout/session.py"]],
+      body: "<p><code>GestureDetector</code> holds a monotonic timer per tracker ID. A raised anatomical right hand needs a reliable nose, shoulder, elbow, and wrist.</p><ul><li>Start: continuously observed raised hand for 2 seconds.</li><li>Replacement while lost: raised hand for 1 second.</li><li>Missing or uncertain observations have a 0.15-second grace period; confident lowering resets the hold.</li><li>The controller commits the chosen ID and logs selection or reassignment.</li></ul>",
+      boundary: "Gesture selection runs in the main process and is separate from exercise repetition analysis."
+    },
+    session: {
+      title: "Session authority", sources: [["workout/session.py", "../workout/session.py"], ["workout/packets.py", "../workout/packets.py"]],
+      body: "<p><code>SessionController</code> owns WAITING, ACTIVE_TRACKED, ACTIVE_LOST, and FINISHED, plus the selected ID and 180-second timer.</p><ul><li>Selection, loss, and recovery update the continuity generation.</li><li>Status must match the generation, be newer than the last accepted status, and not be ahead of the last submitted frame.</li><li>It creates the selected <code>PosePacket</code>, appends it to the recorder, and returns it for publication.</li><li>Loss records an absent pose and keeps the timer running.</li></ul>",
+      boundary: "Only accepted status updates the main-process rep count and exercise phase; error status is rejected."
+    },
+    display: {
+      title: "Live display and accepted progress", sources: [["workout/live_display.py", "../workout/live_display.py"], ["workout_session.py", "../workout_session.py"]],
+      body: "<p>The runtime switches between a plotted video result and <code>LiveSkeletonView</code> using V.</p><ul><li>Video mode adds the reference performance HUD and workout state.</li><li>Skeleton mode shows the selected pose, confidence, geometry gates, accepted count, and worker health.</li><li><code>inspect_pose()</code> reuses the counter classifier for current-pose checks, without calling <code>update()</code>.</li><li>Headless mode skips window creation and input, but rendering still runs.</li></ul>",
+      boundary: "Rendering does not select a person, advance the repetition counter, or change recorded history."
+    },
+    "pose-mailbox": {
+      title: "Latest-value pose mailbox", sources: [["workout/analysis/worker.py", "../workout/analysis/worker.py"], ["workout/packets.py", "../workout/packets.py"]],
+      body: "<p><code>AnalysisWorker.publish()</code> serializes a small <code>PosePacket</code> into one 8 KiB shared-memory slot.</p><ul><li>Producer and consumer attempt the lock without waiting.</li><li>A publish may overwrite an unread packet, or drop on lock contention.</li><li>The worker copies the payload and releases the lock before analysis.</li><li>Packet fields include generation and accepted reps, so continuity survives skipped observations.</li></ul>",
+      boundary: "This is a latest-value shared slot, not a FIFO queue. Camera images and GPU tensors are not sent."
+    },
+    counter: {
+      title: "Jumping-jack repetition counter", sources: [["workout/analysis/jumping_jack.py", "../workout/analysis/jumping_jack.py"]],
+      body: "<p><code>analysis_main()</code> owns one <code>JumpingJackCounter</code>. It analyzes the selected normalized pose using body-relative wrist and ankle measurements.</p><ul><li>CLOSED → OPEN → CLOSED adds one rep after posture confirmation of 0.06 seconds.</li><li>Invalid required joints, missing poses, or sample gaps over 0.5 seconds reset the partial phase.</li><li>ID or generation changes reset phase and seed the count from <code>accepted_reps</code>.</li><li>Duplicate or older frame numbers are ignored.</li></ul>",
+      boundary: "The counter is the exercise extension point inside analysis_main(); thresholds live in JumpingJackConfig."
+    },
+    "status-mailbox": {
+      title: "Analysis feedback and worker lifecycle", sources: [["workout/analysis/worker.py", "../workout/analysis/worker.py"], ["workout/session.py", "../workout/session.py"]],
+      body: "<p>After each analyzed packet, the worker publishes an <code>AnalysisStatus</code> through the second latest-value mailbox.</p><ul><li>The main process polls for a new count, phase, processed frame, generation, and error.</li><li>The runtime reports error, offline, or lagging analysis while continuing pose recording.</li><li>Startup waits for ready before the camera opens.</li><li>Shutdown requests stop, drains pending work, and performs bounded joins after capture ends.</li></ul>",
+      boundary: "The controller validates status before acceptance; a late or incompatible result cannot rewrite live history."
+    },
+    playback: {
+      title: "Offline skeleton playback", sources: [["sessions/playback.py", "playback.py"]],
+      body: "<p><code>Recording.load()</code> reads the saved NPZ, and <code>PlaybackClock</code> drives a separate OpenCV skeleton player.</p><ul><li>Pause, seek, step individual frames, change speed, and loop.</li><li>Display the saved live rep counts and presence state.</li><li>Use timestamps to preserve session timing during playback.</li></ul>",
+      boundary: "Playback reads poses without loading YOLO or opening a camera; it does not rerun the exercise counter."
+    },
+    debug: {
+      title: "Offline geometry and phase debugging", sources: [["sessions/debug.py", "debug.py"], ["workout/analysis/jumping_jack.py", "../workout/analysis/jumping_jack.py"]],
+      body: "<p>The debugger loads the recording and replays the counter to inspect why each sample counted, transitioned, or reset.</p><ul><li>Visualize wrist/feet measurements, confidence, threshold gates, phase, and continuity.</li><li>Adjust an offline configuration and rebuild diagnostic results.</li><li>Compare recomputed behavior with the recording's accepted counts.</li></ul>",
+      boundary: "Offline tuning is independent of the live session and preserves the source recording."
+    }
+  };
+  const nodes = Array.from(document.querySelectorAll("[data-node]"));
+  function selectComponent(key) {
+    const component = components[key];
+    if (!component) return;
+    nodes.forEach(node => {
+      const selected = node.dataset.node === key;
+      node.classList.toggle("selected", selected);
+      node.setAttribute("aria-pressed", String(selected));
+    });
+    document.getElementById("detail-title").textContent = component.title;
+    const source = document.getElementById("detail-source");
+    source.replaceChildren();
+    component.sources.forEach(([label, href], index) => {
+      if (index) source.append(document.createTextNode(" · "));
+      const link = document.createElement("a");
+      link.href = href;
+      const code = document.createElement("code");
+      code.textContent = label;
+      link.append(code);
+      source.append(link);
+    });
+    document.getElementById("detail-body").innerHTML = component.body;
+    const boundary = document.getElementById("detail-contract");
+    boundary.replaceChildren();
+    const label = document.createElement("strong");
+    label.textContent = "Boundary: ";
+    boundary.append(label, document.createTextNode(component.boundary));
+  }
+  nodes.forEach(node => {
+    node.addEventListener("click", () => selectComponent(node.dataset.node));
+    node.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        selectComponent(node.dataset.node);
+      }
+    });
+  });
+  const captions = {
+    all: "All flows · select a component to inspect its responsibilities below.",
+    live: "Live frame · capture → tracking → session → display.",
+    analysis: "Rep analysis · selected pose → latest mailbox → counter → validated status.",
+    save: "Save & replay · session → saved poses after shutdown → offline consumers."
+  };
+  document.querySelectorAll("[data-mode]").forEach(button => {
+    button.addEventListener("click", () => {
+      const mode = button.dataset.mode;
+      document.querySelectorAll("[data-mode]").forEach(tab => tab.setAttribute("aria-pressed", String(tab === button)));
+      document.querySelectorAll("[data-modes]").forEach(element => {
+        element.classList.toggle("dim", mode !== "all" && !element.dataset.modes.split(" ").includes(mode));
+      });
+      document.getElementById("flow-caption").textContent = captions[mode];
+    });
+  });
+  selectComponent("session");
+  document.getElementById("print-button").addEventListener("click", () => window.print());
+})();
+</script>
+</body>
+</html>

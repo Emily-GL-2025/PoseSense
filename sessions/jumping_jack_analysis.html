@@ -1,0 +1,906 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Source-backed explanation of PoseSense jumping-jack geometry, confirmation timing, hysteresis, continuity and recorded counts.">
+  <title>How a jumping jack is counted · PoseSense</title>
+  <style>
+    :root { color-scheme: light; --ink:#202c3c; --muted:#536377; --paper:#fff; --page:#f2f5f8; --line:#d8e1eb; --blue:#1b61ad; --blue-light:#eaf3ff; --green:#1c714e; --green-light:#e9f5ee; --amber:#855900; --amber-light:#fff4d9; --red:#a8323c; --red-light:#fdeef0; --nav:#15283d; }
+    * { box-sizing:border-box; }
+    html { scroll-padding-top:24px; }
+    body { margin:0; background:var(--page); color:var(--ink); font:16px/1.75 "Segoe UI",system-ui,sans-serif; }
+    a { color:var(--blue); text-underline-offset:3px; }
+    a:hover { text-decoration-thickness:2px; }
+    .skip { position:absolute; left:16px; top:-60px; padding:8px 16px; background:white; z-index:5; }
+    .skip:focus { top:12px; }
+    aside { position:fixed; inset:0 auto 0 0; width:248px; overflow-y:auto; padding:36px 24px; background:var(--nav); color:#e4edf7; }
+    .brand { display:block; color:#b7d6f8; font-size:12px; font-weight:700; letter-spacing:2px; text-transform:uppercase; }
+    aside h2 { margin:14px 0 24px; font-size:22px; line-height:1.35; color:white; }
+    aside a { display:block; padding:8px 0; color:#dbe6f3; text-decoration:none; font-size:14px; line-height:1.5; }
+    aside a:hover { color:white; text-decoration:underline; }
+    aside .note { border-top:1px solid #395168; margin-top:24px; padding-top:20px; font-size:12px; line-height:1.7; color:#b6c7d9; }
+    main { margin-left:248px; max-width:1320px; padding:54px clamp(24px,5vw,78px) 72px; }
+    header { margin-bottom:40px; }
+    .eyebrow { color:var(--blue); text-transform:uppercase; letter-spacing:1.8px; font-size:12px; font-weight:700; }
+    h1 { margin:10px 0 20px; font-size:clamp(32px,4vw,52px); line-height:1.12; letter-spacing:-1.4px; max-width:780px; }
+    .lead { font-size:20px; line-height:1.65; max-width:830px; color:#3c5068; }
+    .meta { font-size:13px; color:var(--muted); }
+    section { background:var(--paper); border:1px solid var(--line); padding:32px; margin:26px 0; border-radius:12px; }
+    h2 { margin:0 0 18px; font-size:27px; line-height:1.3; letter-spacing:-.5px; }
+    h3 { margin:28px 0 10px; font-size:19px; line-height:1.4; }
+    h4 { margin:18px 0 8px; }
+    p { margin:12px 0; }
+    ul,ol { margin:12px 0; padding-left:24px; }
+    li { margin:7px 0; }
+    strong { font-weight:650; }
+    .callout { border-left:4px solid var(--blue); background:var(--blue-light); padding:14px 18px; margin:20px 0; }
+    .callout.warn { border-color:var(--amber); background:var(--amber-light); }
+    .callout.danger { border-color:var(--red); background:var(--red-light); }
+    .callout p:first-child { margin-top:0; } .callout p:last-child { margin-bottom:0; }
+    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; }
+    .grid > * { min-width:0; }
+    .mini { padding:18px 20px; background:var(--page); border-radius:8px; }
+    .mini h3 { margin-top:0; }
+    .tag { display:inline-block; border-radius:4px; padding:1px 7px; font-size:13px; font-weight:650; }
+    .closed { background:var(--green-light); color:var(--green); }
+    .open { background:var(--blue-light); color:var(--blue); }
+    .dead { background:var(--amber-light); color:var(--amber); }
+    .invalid { background:var(--red-light); color:var(--red); }
+    .unknown { background:#edf0f5; color:#536377; }
+    code { font: .9em/1.6 Consolas,"Cascadia Code",monospace; background:#edf1f6; border-radius:3px; padding:2px 5px; overflow-wrap:anywhere; }
+    pre { margin:16px 0; padding:20px; background:#15283d; color:#e4edf7; border-radius:8px; overflow:auto; line-height:1.6; font-size:13px; tab-size:4; }
+    pre code { padding:0; background:transparent; color:inherit; white-space:pre; overflow-wrap:normal; }
+    .code-caption { color:var(--muted); font-size:13px; margin-top:-6px; }
+    .formula { padding:16px 20px; margin:16px 0; border:1px solid var(--line); background:#f8fafc; line-height:2; font-family:Consolas,"Cascadia Code",monospace; font-size:15px; overflow-wrap:anywhere; }
+    .table-wrap { overflow-x:auto; margin:18px 0; }
+    table { border-collapse:collapse; width:100%; font-size:14px; text-align:left; }
+    caption { text-align:left; color:var(--muted); font-size:13px; padding-bottom:10px; }
+    th { background:#edf2f8; color:#334d67; font-weight:650; }
+    th,td { padding:12px 14px; border-bottom:1px solid var(--line); vertical-align:top; }
+    tbody tr:last-child td { border-bottom:0; }
+    .num { font-variant-numeric:tabular-nums; white-space:nowrap; }
+    figure { margin:24px 0; }
+    .diagram { overflow-x:auto; padding:12px 0; }
+    svg { display:block; width:100%; height:auto; }
+    .wide { min-width:700px; }
+    .medium { min-width:520px; }
+    svg text { font-family:"Segoe UI",system-ui,sans-serif; fill:var(--ink); font-size:15px; }
+    svg .small { font-size:13px; fill:var(--muted); }
+    svg .heading { font-size:17px; font-weight:650; }
+    svg .blue-text { fill:var(--blue); } svg .green-text { fill:var(--green); } svg .red-text { fill:var(--red); } svg .amber-text { fill:var(--amber); }
+    svg .node { fill:#f5f8fc; stroke:var(--line); stroke-width:1.5; }
+    svg .edge { fill:none; stroke:#6b8095; stroke-width:2; }
+    svg .skeleton { fill:none; stroke:#415c76; stroke-width:5; stroke-linecap:round; stroke-linejoin:round; }
+    svg .joint { fill:white; stroke:#415c76; stroke-width:2.5; }
+    svg .guide { fill:none; stroke:var(--blue); stroke-width:2; stroke-dasharray:7 5; }
+    svg .closed-guide { fill:none; stroke:var(--green); stroke-width:2; stroke-dasharray:7 5; }
+    figcaption { margin-top:10px; color:var(--muted); font-size:13px; line-height:1.65; }
+    details { margin:18px 0; border:1px solid var(--line); border-radius:6px; padding:12px 16px; }
+    summary { cursor:pointer; font-weight:650; color:var(--blue); }
+    .source { font-size:13px; color:var(--muted); }
+    footer { padding:10px 2px; color:var(--muted); font-size:13px; }
+    .lab { margin:22px 0 30px; padding:22px; border:1px solid #bfd5ef; border-radius:10px; background:#f8fbff; }
+    .lab h3 { margin-top:0; }
+    .lab-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:24px; }
+    .lab-grid > * { min-width:0; }
+    .controls label { display:block; margin:12px 0 4px; font-size:14px; font-weight:650; }
+    .controls output { float:right; font-variant-numeric:tabular-nums; }
+    input[type=range] { width:100%; accent-color:var(--blue); }
+    button,select { font:inherit; font-size:14px; border:1px solid #9db1c8; border-radius:6px; background:white; color:var(--ink); padding:9px 13px; }
+    button { cursor:pointer; } button:hover { background:var(--blue-light); }
+    button:disabled { cursor:default; opacity:.5; }
+    button:focus-visible,select:focus-visible,input:focus-visible { outline:3px solid var(--blue); outline-offset:3px; }
+    .buttons { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+    .gate-list { margin:12px 0; padding:0; list-style:none; font-size:14px; }
+    .gate-list li { border-bottom:1px solid var(--line); padding:6px 0; }
+    .gate-list .tag { margin-right:7px; }
+    .metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:18px 0; }
+    .metric { padding:12px; background:white; border:1px solid var(--line); border-radius:6px; font-size:12px; }
+    .metric strong { display:block; font-size:18px; }
+    .sample-log { max-height:330px; overflow:auto; }
+    .sample-log th { position:sticky; top:0; }
+    #pose-svg { background:white; border:1px solid var(--line); border-radius:8px; }
+    .lab-note { font-size:13px; color:var(--muted); }
+    @media (max-width:1080px) { .lab-grid { grid-template-columns:1fr; } }
+    @media (max-width:760px) { .lab { padding:16px 12px; } .metrics { grid-template-columns:1fr 1fr; } select { width:100%; } }
+    @media print { .lab { background:white; } .controls,.buttons,.scenario-controls { display:none; } .sample-log { max-height:none; overflow:visible; } .lab-grid { grid-template-columns:1fr 1fr; } }
+    @media (max-width:1080px) { aside { width:210px; padding:28px 18px; } main { margin-left:210px; padding:36px 24px; } section { padding:24px; } .grid { grid-template-columns:1fr; } }
+    @media (max-width:760px) { aside { position:static; width:auto; padding:24px; } aside h2 { margin:8px 0 14px; } aside nav { display:grid; grid-template-columns:1fr 1fr; column-gap:20px; } aside .note { display:none; } main { margin-left:0; padding:28px 16px; } section { padding:22px 18px; } h2 { font-size:24px; } body { font-size:15px; } .lead { font-size:18px; } }
+    @media print { @page { margin:15mm; } html { scroll-behavior:auto; } body { background:white; font-size:10pt; line-height:1.5; } aside,.skip { display:none; } main { margin:0; padding:0; max-width:none; } section { border:0; border-top:1px solid #bbb; border-radius:0; padding:20px 0; margin:15px 0; } h1 { font-size:30pt; } h2 { font-size:20pt; } h3 { font-size:14pt; } h2,h3,h4 { break-after:avoid; } figure,pre,.callout,tr { break-inside:avoid; } pre { white-space:pre-wrap; background:#f2f4f7; color:#172538; font-size:9pt; } pre code { white-space:pre-wrap; } .wide,.medium { min-width:0; } .diagram,.table-wrap { overflow:visible; } th,td { padding:7px; } a { color:inherit; } .grid { grid-template-columns:1fr 1fr; } }
+    @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
+  </style>
+</head>
+<body>
+<a class="skip" href="#content">Skip to documentation</a>
+<aside aria-label="Documentation navigation">
+  <span class="brand">PoseSense / Engineering guide</span>
+  <h2>How a jumping jack<br>is counted</h2>
+  <nav aria-label="Contents">
+    <a href="#contract">01 · What “valid” means</a>
+    <a href="#flow">02 · Live data flow</a>
+    <a href="#coordinates">03 · Coordinates &amp; validity</a>
+    <a href="#spatial">04 · Spatial measurements</a>
+    <a href="#pose-lab">↳ Explore a pose</a>
+    <a href="#thresholds">05 · All seven thresholds</a>
+    <a href="#hysteresis">06 · Hysteresis &amp; state</a>
+    <a href="#time">07 · Temporal confirmation</a>
+    <a href="#sequence-lab">↳ Step through a cycle</a>
+    <a href="#resets">08 · Gaps, loss &amp; resets</a>
+    <a href="#code">09 · Counter code</a>
+    <a href="#recording">10 · Replay &amp; real evidence</a>
+    <a href="#debugging">11 · Debugging checklist</a>
+    <a href="#sources">12 · Source map</a>
+  </nav>
+  <p class="note">Source snapshot: 7 October 2026.<br>Local, offline documentation.<br>No scripts, fonts or diagrams are loaded from the internet.</p>
+</aside>
+<main id="content">
+  <header>
+    <div class="eyebrow">Geometry → confirmation → state → repetition</div>
+    <h1>How a valid jumping jack is measured</h1>
+    <p class="lead">A source-backed explanation of the current workout analyzer: what the keypoints must do in space, how long a posture must persist, and why a plausible-looking movement can still produce no repetition.</p>
+    <p class="meta">Based on <a href="../workout/analysis/jumping_jack.py">workout/analysis/jumping_jack.py</a> and its live recording pipeline. Defaults inspected on 2026-10-07. This is an implementation guide, not a general exercise-form standard.</p>
+    <p class="meta">Learning the counter? Start with the separate <a href="jumping_jack_flowchart.html">flowchart guide</a>, then the <a href="jumping_jack_pseudocode.html">pseudocode guide</a> and <a href="jumping_jack_python_comments.html">line-by-line Python guide</a>. Each uses the same complete worked example.</p>
+    <div class="callout"><p><strong>Are keypoints absolute or normalized?</strong> YOLO returns image-pixel coordinates. This application converts them to <strong>normalized image coordinates</strong> before counting or saving. The counter then compares <strong>body-relative ratios</strong>. The <code>abs()</code> in its formulas means the magnitude of a difference; it does not mean the coordinates are stored as absolute pixels.</p></div>
+  </header>
+
+  <section id="contract">
+    <h2>01 · “Valid” means a recognized sequence</h2>
+    <p>The program does not identify a jumping jack from one frame. It confirms a <span class="tag closed">CLOSED</span> posture, then an <span class="tag open">OPEN</span> posture, then a <span class="tag closed">CLOSED</span> posture again. The final confirmed <strong>OPEN → CLOSED</strong> transition adds one repetition.</p>
+    <div class="formula">UNKNOWN → confirmed CLOSED → confirmed OPEN → confirmed CLOSED = +1 rep</div>
+    <div class="grid">
+      <div class="mini"><h3>CLOSED</h3><p>Both wrists are sufficiently <strong>below their own shoulders</strong>, and the horizontal ankle separation is small enough relative to shoulder width.</p></div>
+      <div class="mini"><h3>OPEN</h3><p>Both wrists are sufficiently <strong>above their own shoulders</strong>, and the horizontal ankle separation is large enough relative to shoulder width.</p></div>
+    </div>
+    <div class="callout warn"><p><strong>It is a 2D posture-cycle heuristic, not a physical jump detector.</strong> It does not test airtime, foot contact with the ground, knee or elbow angles, straight arms, wrist height above the head, symmetry of the motion, speed of the jump, or an energy signal. A non-jumping motion could count if it satisfies the same poses and sequence.</p></div>
+    <p>“No rep” can therefore mean four different things: the spatial gates never passed together; a candidate posture was too brief; the cycle was not armed from CLOSED; or a continuity/validity failure reset the phase.</p>
+  </section>
+
+  <section id="flow">
+    <h2>02 · Where the measurements come from</h2>
+    <p><code>workout_session.py</code> loads <strong>yolo26m-pose.pt</strong> and calls <code>model.track(..., persist=True)</code> once per processed camera frame. YOLO estimates the 17 joints; the tracker associates current observations with IDs. The main controller selects one ID, while the separate CPU counter decides whether that person's pose completes a repetition. YOLO itself does not output a jumping-jack count.</p>
+    <figure>
+      <div class="diagram">
+      <svg class="wide" viewBox="0 0 920 355" role="img" aria-labelledby="flow-title flow-desc" xmlns="http://www.w3.org/2000/svg">
+        <title id="flow-title">One recorded pose, two independent consumers</title>
+        <desc id="flow-desc">Camera and YOLO tracking produce pixel keypoints. Tracking normalizes coordinates. The main session controller chooses a tracked person and cleans a packet. It records each packet before publishing it to a latest-value analysis mailbox. A worker returns counters asynchronously, and the main controller filters and accepts statuses.</desc>
+        <defs><marker id="flow-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#6b8095"/></marker></defs>
+        <rect class="node" x="10" y="18" width="245" height="79" rx="9"/>
+        <text class="heading" x="28" y="47">YOLO pose + tracking</text><text class="small" x="28" y="73">Camera → IDs and pixel keypoints</text>
+        <rect class="node" x="336" y="18" width="245" height="79" rx="9"/>
+        <text class="heading" x="354" y="47">tracked_people()</text><text class="small" x="354" y="73">x ÷ image width; y ÷ image height</text>
+        <rect class="node" x="662" y="18" width="248" height="79" rx="9"/>
+        <text class="heading" x="680" y="47">SessionController</text><text class="small" x="680" y="73">Select ID → clean_pose → PosePacket</text>
+        <path class="edge" marker-end="url(#flow-arrow)" d="M255 58H329"/>
+        <path class="edge" marker-end="url(#flow-arrow)" d="M581 58H655"/>
+        <rect x="662" y="162" width="248" height="79" rx="9" fill="#e9f5ee" stroke="#b6d7c5"/>
+        <text class="heading green-text" x="680" y="191">1. Record every active frame</text><text class="small" x="680" y="217">Owned history; save NPZ on finish/quit</text>
+        <path class="edge" marker-end="url(#flow-arrow)" d="M786 97V155"/>
+        <rect class="node" x="336" y="162" width="245" height="79" rx="9"/>
+        <text class="heading" x="354" y="191">2. Latest-value mailbox</text><text class="small" x="354" y="217">Small packet; can overwrite/drop work</text>
+        <path class="edge" marker-end="url(#flow-arrow)" d="M662 202H588"/>
+        <rect x="10" y="162" width="245" height="79" rx="9" fill="#eaf3ff" stroke="#bfd5ef"/>
+        <text class="heading blue-text" x="28" y="191">JumpingJackCounter</text><text class="small" x="28" y="217">update(): geometry + timing + phase</text>
+        <path class="edge" marker-end="url(#flow-arrow)" d="M336 202H262"/>
+        <path class="edge" marker-end="url(#flow-arrow)" d="M132 241V305H918V121H856V104"/>
+        <text x="238" y="292">Asynchronous status → generation/frame checks → accepted live count</text>
+        <text class="small" x="10" y="343">Only normalized keypoints and small metadata enter exercise analysis; the worker receives no camera images.</text>
+      </svg>
+      </div>
+      <figcaption>The arrows show logical flow, not blocking waits. Recording happens in the main process before the packet is submitted to the background worker. A slow worker cannot erase already-recorded samples.</figcaption>
+    </figure>
+    <p>A <code>PosePacket</code> contains <code>frame_index</code>, a session-relative timestamp, <code>selected_track_id</code>, a <code>[17,3]</code> pose, <code>present</code>, a continuity <code>generation</code>, and the main process’s <code>accepted_reps</code>. The counter uses pose timestamps—not the time at which a worker happens to execute the code.</p>
+    <p class="source">Sources: <a href="../workout/tracking.py">tracking.py · tracked_people, line 40</a>; <a href="../workout/session.py">session.py · process_frame, line 98</a>; <a href="../workout/analysis/worker.py">worker.py · analysis_main, line 60</a>.</p>
+  </section>
+
+  <section id="coordinates">
+    <h2>03 · Coordinates, joint identity and validity</h2>
+    <h3>The axes are image axes</h3>
+    <div class="formula">x = pixel_x / camera_width<br>y = pixel_y / camera_height<br>pose[joint] = [normalized_x, normalized_y, confidence]</div>
+    <div class="table-wrap"><table>
+      <caption>Three measurement stages in this application.</caption>
+      <thead><tr><th>Stage</th><th>Units / representation</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td>YOLO result: <code>keypoints.data</code> / <code>.xy</code></td><td>x and y in pixels of the original camera frame; confidence is a separate score.</td><td>(640 px, 360 px, 0.99) in a 1280 × 720 frame.</td></tr>
+        <tr><td><code>tracked_people()</code>, analysis packet, saved NPZ</td><td>Image-normalized x and y; confidence remains unchanged. Pose shape: <code>[17,3]</code>, float32.</td><td>(0.50, 0.50, 0.99).</td></tr>
+        <tr><td><code>classify()</code> comparisons</td><td>Horizontal ankle spread / horizontal shoulder width; vertical wrist offset / vertical body span.</td><td>Feet ratio 2.5; wrist offset −0.5 of body span.</td></tr>
+      </tbody>
+    </table></div>
+    <p>The denominator is <code>result.orig_shape</code>, the <strong>actual original image</strong> dimensions. It is not the neural network's <code>imgsz=640</code>, the displayed window size, or the person's bounding box. The installed pose predictor maps network predictions back to the original frame before the application divides them.</p>
+    <pre><code># workout/tracking.py — actual conversion, with explanatory comments
+# Each selected person has 17 rows: pixel x, pixel y, confidence.
+poses = data[indices.tolist()].detach().cpu().numpy().astype(np.float32, copy=True)
+height, width = result.orig_shape    # original camera frame, not network input
+poses[:, :, 0] /= width              # x is now a fraction of image width
+poses[:, :, 1] /= height             # y is now a fraction of image height
+# Column 2 (confidence) is unchanged. Equivalent x/y units to keypoints.xyn.</code></pre>
+    <p>The origin is the image’s upper-left corner. Larger x means farther right on the image; <strong>larger y means lower on the image</strong>. “Left” and “right” joint names mean the person’s anatomical sides, not the left and right of the screen. There is no side-specific correction in these formulas.</p>
+    <p>Normalization removes image-size units. The analyzer then divides horizontal distances by a horizontal body reference and vertical distances by a vertical body reference. Consequently, image width cancels from the ankle ratio, and image height cancels from the wrist/span ratio. It does <em>not</em> compute Euclidean distances from a mixture of normalized x and y. Normalization does not correct occlusion, perspective, body rotation or inference errors.</p>
+    <div class="table-wrap"><table>
+      <caption>The six required COCO keypoints; indices are zero-based.</caption>
+      <thead><tr><th>Side</th><th>Shoulder</th><th>Wrist</th><th>Ankle</th></tr></thead>
+      <tbody><tr><th scope="row">Anatomical left</th><td>5</td><td>9</td><td>15</td></tr><tr><th scope="row">Anatomical right</th><td>6</td><td>10</td><td>16</td></tr></tbody>
+    </table></div>
+    <h3>One bad required joint invalidates the whole posture</h3>
+    <p>All x, y and confidence values for these six joints must be finite, and each confidence must be <code>≥ 0.5</code>. Equality at the confidence threshold is accepted. The shared <code>clean_pose()</code> function replaces unreliable x/y coordinates with <code>NaN</code>, while retaining confidence. The analysis and recorder receive these cleaned coordinates.</p>
+    <pre><code># workout/packets.py — actual validity test
+points = pose[list(indices)]
+return bool(
+    np.isfinite(points).all()
+    and (points[:, 2] &gt;= confidence).all()
+)</code></pre>
+    <p>The classifier adds two scale-validity checks: shoulder width must be at least <code>0.01</code> in normalized x, and the mean ankle y must be below the mean shoulder y, giving a vertical span strictly greater than zero. The analyzer itself does not add an <code>x/y ∈ [0,1]</code> gate. Do not confuse display clipping with analysis validity.</p>
+    <div class="callout danger"><p><strong>Lowering replay confidence cannot recover erased coordinates.</strong> If the recording already contains NaN x/y, a lower threshold in <a href="debug.py">debug.py</a> still leaves the joint invalid. The original image and pre-mask coordinates are not present in the NPZ.</p></div>
+  </section>
+
+  <section id="spatial">
+    <h2>04 · The spatial formulas</h2>
+    <div class="lab" id="pose-lab">
+      <h3>Explore the six-joint pose</h3>
+      <p>Move a wrist, widen the feet, or lower one joint's confidence. The three OPEN gates or three CLOSED gates must pass <strong>together</strong>. This panel classifies one synthetic frame; temporal confirmation comes next.</p>
+      <p class="lab-note"><strong>0.20 is an example measurement, not a fixed value in the application.</strong> The live counter measures shoulder width from every pose: <code>abs(left_shoulder_x - right_shoulder_x)</code>. Because those x coordinates were already divided by image width in <code>tracked_people()</code>, this difference equals shoulder separation in pixels / image width. The counter uses it as the reference for ankle spread; it does not divide it by image width again.</p>
+      <div class="lab-grid">
+        <div class="controls">
+          <div class="buttons" aria-label="Example poses">
+            <button type="button" data-pose="closed">CLOSED example</button>
+            <button type="button" data-pose="open">OPEN example</button>
+            <button type="button" data-pose="narrow">Arms up, feet too narrow</button>
+          </div>
+          <label for="shoulder-width">Example shoulder width (normalized x) <output id="shoulder-width-value" for="shoulder-width">0.20</output></label>
+          <input id="shoulder-width" type="range" min="0.005" max="0.30" step="0.005" value="0.20">
+          <label for="ankle-ratio">Ankle spread / shoulder width <output id="ankle-ratio-value" for="ankle-ratio">0.50</output></label>
+          <input id="ankle-ratio" type="range" min="0" max="3" step="0.01" value="0.50">
+          <label for="left-wrist">Left wrist offset / body span <output id="left-wrist-value" for="left-wrist">+0.50</output></label>
+          <input id="left-wrist" type="range" min="-0.60" max="0.70" step="0.01" value="0.50">
+          <label for="right-wrist">Right wrist offset / body span <output id="right-wrist-value" for="right-wrist">+0.50</output></label>
+          <input id="right-wrist" type="range" min="-0.60" max="0.70" step="0.01" value="0.50">
+          <label for="joint-confidence">Left ankle confidence <output id="joint-confidence-value" for="joint-confidence">0.99</output></label>
+          <input id="joint-confidence" type="range" min="0" max="1" step="0.01" value="0.99">
+        </div>
+        <div>
+          <svg id="pose-svg" viewBox="0 0 640 410" role="img" aria-labelledby="lab-pose-title lab-pose-desc" xmlns="http://www.w3.org/2000/svg">
+            <title id="lab-pose-title">Interactive image-normalized pose</title>
+            <desc id="lab-pose-desc">A schematic frontal skeleton in a 1280 by 720 image. Dashed lines show wrist limits. Joint positions change with the controls; numerical tests appear below.</desc>
+            <rect x="20" y="20" width="600" height="337.5" fill="#f5f8fc" stroke="#d8e1eb"/>
+            <text class="small" x="30" y="43">(0,0) · y increases downward</text>
+            <path id="lab-open-line" class="guide" d="M40 121H600"/>
+            <path id="lab-closed-line" class="closed-guide" d="M40 155H600"/>
+            <circle cx="320" cy="81" r="17" fill="white" stroke="#415c76" stroke-width="3"/>
+            <path id="lab-body" class="skeleton" d=""/>
+            <path id="lab-shoulders" stroke="#855900" stroke-width="3" d=""/>
+            <path id="lab-feet" stroke="#855900" stroke-width="3" d=""/>
+            <g id="lab-joints"></g>
+            <text class="small" x="26" y="387">Blue: OPEN wrist limit · green: CLOSED wrist limit</text>
+          </svg>
+          <p aria-live="polite">Current frame: <span class="tag closed" id="pose-label">CLOSED</span></p>
+          <ul id="pose-gates" class="gate-list"></ul>
+        </div>
+      </div>
+      <p id="pose-measurements" class="formula"></p>
+      <details><summary>Inspect the six normalized [x, y, confidence] rows</summary><pre><code id="pose-rows"></code></pre></details>
+      <p class="lab-note">Shoulder y = 0.35; ankle y = 0.85; body span = 0.50. Anatomical left is drawn on the viewer's right. The controls set intended decimal values; measurements use float32 keypoints, like the application. Blue and green lines are separate entry limits, not additional joints.</p>
+      <noscript><p>Enable JavaScript to use the controls. All formulas, flowcharts and commented Python below remain readable without it.</p></noscript>
+    </div>
+    <p>Let <code>S</code>, <code>W</code> and <code>A</code> denote shoulder, wrist and ankle. Subscripts <code>L</code> and <code>R</code> denote anatomical sides. All the following quantities are recomputed from the <strong>current pose</strong>; shoulder width and body span are not calibrated once or smoothed over time.</p>
+    <div class="formula">
+      shoulder_width = |S_L.x − S_R.x|<br>
+      body_span = (A_L.y + A_R.y − S_L.y − S_R.y) / 2<br>
+      ankle_ratio = |A_L.x − A_R.x| / shoulder_width<br>
+      left_delta = W_L.y − S_L.y<br>
+      right_delta = W_R.y − S_R.y<br>
+      margin = 0.10 × body_span
+    </div>
+    <figure>
+      <div class="diagram">
+      <svg class="wide" viewBox="0 0 900 410" role="img" aria-labelledby="pose-title pose-desc" xmlns="http://www.w3.org/2000/svg">
+        <title id="pose-title">Open and closed target poses with body-relative measurements</title>
+        <desc id="pose-desc">Open requires both wrists above their own shoulder minus a margin, with wide ankles. Closed requires both wrists below their own shoulder plus a margin, with narrow ankles. The margin is one tenth of vertical mean-shoulder to mean-ankle span. Schematic shoulders are drawn level for clarity.</desc>
+        <defs><marker id="pose-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto-start-reverse"><path d="M0 0L7 3.5L0 7Z" fill="#6b8095"/></marker></defs>
+        <text class="heading blue-text" x="38" y="27">OPEN: wrists up + feet wide</text>
+        <text class="heading green-text" x="500" y="27">CLOSED: wrists down + feet narrow</text>
+        <line x1="453" y1="14" x2="453" y2="389" stroke="#d8e1eb"/>
+        <circle cx="214" cy="85" r="23" fill="#f2f5f8" stroke="#415c76" stroke-width="3"/>
+        <path class="skeleton" d="M178 131L250 131L239 227L189 227Z M178 131L144 84L117 47 M250 131L284 84L311 47 M189 227L159 281L126 337 M239 227L272 281L304 337"/>
+        <path class="guide" d="M67 110H360"/>
+        <text class="small blue-text" x="65" y="99">wrist y &lt; shoulder y − margin</text>
+        <circle class="joint" cx="178" cy="131" r="5"/><circle class="joint" cx="250" cy="131" r="5"/>
+        <circle cx="117" cy="47" r="6" fill="#1b61ad"/><circle cx="311" cy="47" r="6" fill="#1b61ad"/>
+        <circle class="joint" cx="126" cy="337" r="5"/><circle class="joint" cx="304" cy="337" r="5"/>
+        <path class="edge" marker-start="url(#pose-arrow)" marker-end="url(#pose-arrow)" d="M181 152H247"/>
+        <text class="small" x="152" y="174">shoulder width</text>
+        <path class="edge" marker-start="url(#pose-arrow)" marker-end="url(#pose-arrow)" d="M129 363H301"/>
+        <text x="123" y="389">ankle spread ≥ 1.4 × width</text>
+        <path class="edge" marker-start="url(#pose-arrow)" marker-end="url(#pose-arrow)" d="M383 134V334"/>
+        <text class="small" x="396" y="218">body</text><text class="small" x="396" y="238">span</text>
+        <circle cx="689" cy="85" r="23" fill="#f2f5f8" stroke="#415c76" stroke-width="3"/>
+        <path class="skeleton" d="M653 131L725 131L714 227L664 227Z M653 131L633 185L627 251 M725 131L745 185L751 251 M664 227L670 283L675 337 M714 227L708 283L703 337"/>
+        <path class="closed-guide" d="M548 152H826"/>
+        <text class="small green-text" x="548" y="176">wrist y &gt; shoulder y + margin</text>
+        <circle class="joint" cx="653" cy="131" r="5"/><circle class="joint" cx="725" cy="131" r="5"/>
+        <circle cx="627" cy="251" r="6" fill="#1c714e"/><circle cx="751" cy="251" r="6" fill="#1c714e"/>
+        <circle class="joint" cx="675" cy="337" r="5"/><circle class="joint" cx="703" cy="337" r="5"/>
+        <path class="edge" marker-start="url(#pose-arrow)" marker-end="url(#pose-arrow)" d="M656 113H722"/>
+        <text class="small" x="770" y="214">y</text><path class="edge" marker-end="url(#pose-arrow)" d="M777 227V283"/>
+        <text class="small" x="789" y="263">down</text>
+        <path class="edge" marker-start="url(#pose-arrow)" marker-end="url(#pose-arrow)" d="M677 363H701"/>
+        <text x="569" y="389">ankle spread ≤ 1.0 × width</text>
+      </svg>
+      </div>
+      <figcaption>Schematic, not measured footage. Shoulders are level here only to simplify the drawing. In code, each wrist is compared with its own shoulder; the margin is shared and comes from the mean shoulder-to-ankle vertical span.</figcaption>
+    </figure>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Gate</th><th><span class="tag closed">CLOSED</span></th><th><span class="tag open">OPEN</span></th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Left wrist</th><td><code>left_delta &gt; +margin</code></td><td><code>left_delta &lt; −margin</code></td></tr>
+        <tr><th scope="row">Right wrist</th><td><code>right_delta &gt; +margin</code></td><td><code>right_delta &lt; −margin</code></td></tr>
+        <tr><th scope="row">Feet</th><td><code>ankle_ratio ≤ 1.0</code></td><td><code>ankle_ratio ≥ 1.4</code></td></tr>
+        <tr><th scope="row">Combination</th><td>All three CLOSED tests in the same processed sample.</td><td>All three OPEN tests in the same processed sample.</td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>Wrist comparisons are strict; ankle comparisons are inclusive.</strong> A wrist exactly on its boundary does not pass. Ankles exactly at ratio 1.0 pass the CLOSED foot test; ankles exactly at 1.4 pass the OPEN foot test. Passing a foot test alone never classifies a posture.</p>
+    <h3>A worked numerical example</h3>
+    <p>Suppose shoulder x coordinates are 0.40 and 0.60, both shoulder y values are 0.40, and both ankle y values are 0.90. Then width = 0.20, span = 0.50, and margin = 0.05.</p>
+    <ul>
+      <li>OPEN wrist requirement: both wrist y values must be <strong>less than 0.35</strong>. CLOSED wrist requirement: both must be <strong>greater than 0.45</strong>.</li>
+      <li>OPEN ankle requirement: horizontal spread must be at least <strong>0.28</strong>. CLOSED ankle requirement: spread must be at most <strong>0.20</strong>.</li>
+      <li>Wrists at y = 0.10 and ankles at x = 0.25 / 0.75 give ratio 2.5: OPEN.</li>
+      <li>Wrists at y = 0.65 and ankles at x = 0.45 / 0.55 give ratio 0.5: CLOSED.</li>
+      <li>Wrists up but an ankle ratio of 1.20 give <strong>neither posture</strong>, because the feet are not open enough and the arms are not closed.</li>
+    </ul>
+    <p>These are conceptual decimal calculations. Production poses are float32, so values extremely close to a boundary can be affected by floating-point rounding.</p>
+  </section>
+
+  <section id="thresholds">
+    <h2>05 · Every configurable analysis threshold</h2>
+    <div class="table-wrap"><table>
+      <caption>Defaults in JumpingJackConfig at the documented source snapshot.</caption>
+      <thead><tr><th>Configuration field</th><th>Default</th><th>Exact role</th><th>Changing it means…</th></tr></thead>
+      <tbody>
+        <tr><td><code>confidence</code></td><td class="num">0.50</td><td>All six joints must have finite x/y/confidence and confidence ≥ threshold.</td><td>Higher rejects more uncertain joints. Lower cannot recover saved NaN coordinates.</td></tr>
+        <tr><td><code>closed_ankle_ratio</code></td><td class="num">1.0</td><td>CLOSED requires ankle spread / shoulder width ≤ threshold.</td><td>Higher permits a wider finishing stance.</td></tr>
+        <tr><td><code>open_ankle_ratio</code></td><td class="num">1.40</td><td>OPEN requires ankle spread / shoulder width ≥ threshold.</td><td>Lower permits a narrower opening stance.</td></tr>
+        <tr><td><code>wrist_margin</code></td><td class="num">0.10</td><td>Margin = this fraction × vertical shoulder-to-ankle span.</td><td>Higher demands wrists farther from shoulder height in both directions.</td></tr>
+        <tr><td><code>confirm_seconds</code></td><td class="num">0.06 s</td><td>Matching candidate duration must be ≥ this threshold.</td><td>Higher rejects more brief candidates but can miss fast endpoint poses.</td></tr>
+        <tr><td><code>max_sample_gap</code></td><td class="num">0.50 s</td><td>A gap outside [0, threshold] between processed packets resets phase.</td><td>Higher allows longer unobserved intervals; it does not recover lost observations.</td></tr>
+        <tr><td><code>minimum_shoulder_width</code></td><td class="num">0.01</td><td>Reject width &lt; threshold, in normalized image x.</td><td>Higher rejects smaller/foreshortened shoulder spans. At 1280 pixels wide, 0.01 = 12.8 pixels.</td></tr>
+      </tbody>
+    </table></div>
+    <p>The body-span check <code>body_span &gt; 0</code>, six-joint requirement, inclusive confidence comparison, strict wrist comparisons and state-sequence rule are additional <strong>hard-coded rules</strong>, not extra configuration fields.</p>
+    <pre><code>@dataclass(frozen=True)
+class JumpingJackConfig:
+    confidence: float = KEYPOINT_CONFIDENCE  # 0.5 in workout/packets.py
+    closed_ankle_ratio: float = 1.0
+    open_ankle_ratio: float = 1.4
+    wrist_margin: float = 0.10
+    confirm_seconds: float = 0.06
+    max_sample_gap: float = 0.5
+    minimum_shoulder_width: float = 0.01</code></pre>
+    <p class="code-caption">Current fields/defaults from the source; explanatory comments shortened.</p>
+    <div class="callout"><p>The default ankle thresholds create a positive separation between CLOSED and OPEN. Keep that separation in mind when tuning. The configuration dataclass itself does not enforce an ordering between the two values.</p></div>
+  </section>
+
+  <section id="hysteresis">
+    <h2>06 · Hysteresis: the same pose can retain different histories</h2>
+    <p><strong>Hysteresis is state memory between distinct entry conditions.</strong> The counter does not switch CLOSED ↔ OPEN at a single ankle ratio or a single shoulder-height boundary. It uses separated thresholds, and retains the last confirmed phase while passing through an intermediate region.</p>
+    <figure>
+      <div class="diagram">
+      <svg class="wide" viewBox="0 0 900 280" role="img" aria-labelledby="band-title band-desc" xmlns="http://www.w3.org/2000/svg">
+        <title id="band-title">Separated feet and wrist thresholds create intermediate regions</title>
+        <desc id="band-desc">The feet test is closed at ratios at or below 1.0, open at or above 1.4, and neither in between. A wrist is open below minus 0.1 span and closed above plus 0.1 span, with both boundaries belonging to neither region. These are individual gates, not a complete posture.</desc>
+        <text class="heading" x="18" y="28">Feet: ankle spread / shoulder width</text>
+        <rect x="45" y="53" width="270" height="44" fill="#e9f5ee"/><rect x="315" y="53" width="108" height="44" fill="#fff4d9"/><rect x="423" y="53" width="432" height="44" fill="#eaf3ff"/>
+        <text class="green-text" x="100" y="80">CLOSED foot gate</text><text class="amber-text" x="369" y="80" text-anchor="middle">Neither</text><text class="blue-text" x="639" y="80">OPEN foot gate</text>
+        <line x1="315" y1="47" x2="315" y2="105" stroke="#1c714e" stroke-width="2"/><line x1="423" y1="47" x2="423" y2="105" stroke="#1b61ad" stroke-width="2"/>
+        <text x="45" y="126">0</text><text x="315" y="126" text-anchor="middle">1.0</text><text x="423" y="126" text-anchor="middle">1.4</text><text x="832" y="126">3.0</text>
+        <text class="heading" x="18" y="165">Each wrist: (wrist y − same-side shoulder y) / body span</text>
+        <rect x="45" y="190" width="324" height="44" fill="#eaf3ff"/><rect x="369" y="190" width="162" height="44" fill="#fff4d9"/><rect x="531" y="190" width="324" height="44" fill="#e9f5ee"/>
+        <text class="blue-text" x="102" y="218">OPEN: wrist above</text><text class="amber-text" x="402" y="218">Neither</text><text class="green-text" x="627" y="218">CLOSED: wrist below</text>
+        <line x1="369" y1="184" x2="369" y2="242" stroke="#1b61ad" stroke-width="2"/><line x1="531" y1="184" x2="531" y2="242" stroke="#1c714e" stroke-width="2"/>
+        <text x="45" y="265">−0.5</text><text x="350" y="265">−0.1</text><text x="438" y="265">0</text><text x="510" y="265">+0.1</text><text x="818" y="265">+0.5</text>
+      </svg>
+      </div>
+      <figcaption>Individual gates only. The full dead band is larger than either middle strip: any valid combination that fails to satisfy all CLOSED gates and fails to satisfy all OPEN gates is unclassified. For example, wide feet with only one raised wrist are also in the dead band.</figcaption>
+    </figure>
+    <h3>Raw posture, pending posture and stable phase are separate</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Concept</th><th>Meaning</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Raw posture</strong></td><td>What the current pose’s spatial gates say: CLOSED, OPEN or no classification.</td><td>This frame has raised wrists and wide feet → OPEN.</td></tr>
+        <tr><td><strong>Pending posture</strong></td><td>The matching candidate currently being timed, with <code>pending_since</code>.</td><td>OPEN has been seen for 33 ms; not confirmed yet.</td></tr>
+        <tr><td><strong>Stable phase</strong></td><td>The remembered exercise phase: UNKNOWN, CLOSED or OPEN.</td><td>Still CLOSED until OPEN is confirmed for at least 60 ms.</td></tr>
+      </tbody>
+    </table></div>
+    <p>With valid geometry in the dead band, <code>classify()</code> returns <code>None</code> without resetting the stable phase. Then <code>update()</code> clears <code>pending</code>. If the same intermediate pose is reached from CLOSED, the phase stays CLOSED. If reached from OPEN, it stays OPEN. That dependence on history is the hysteresis.</p>
+    <p>The code retains <code>pending</code> after a posture is confirmed, so its displayed duration can exceed 60 ms even when the stable phase already agrees. Another posture starts a new timer; a dead-band or reset condition clears it.</p>
+    <div class="callout warn"><p><strong>“None” has two causes with different effects.</strong> Invalid required joints or degenerate scale also return <code>None</code>, but first call <code>reset_phase()</code>. The debugger labels these cases <strong>INVALID</strong> versus <strong>DEAD BAND</strong>; those are diagnostic labels, not extra values in the production <code>ExerciseState</code> enum.</p></div>
+    <figure>
+      <div class="diagram">
+      <svg class="wide" viewBox="0 0 900 328" role="img" aria-labelledby="state-title state-desc" xmlns="http://www.w3.org/2000/svg">
+        <title id="state-title">Stable-phase state machine</title>
+        <desc id="state-desc">Unknown only advances after closed is confirmed. Closed advances to open after open is confirmed. Open advances to closed and adds one repetition after closed is confirmed. Dead-band poses preserve state and cancel pending confirmation. Invalidity or continuity breaks reset any state to unknown.</desc>
+        <defs><marker id="state-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#6b8095"/></marker></defs>
+        <rect class="node" x="24" y="83" width="180" height="74" rx="10"/><text class="heading" x="68" y="115">UNKNOWN</text><text class="small" x="61" y="139">cycle not armed</text>
+        <rect x="366" y="83" width="180" height="74" rx="10" fill="#e9f5ee" stroke="#b6d7c5"/><text class="heading green-text" x="416" y="115">CLOSED</text><text class="small" x="410" y="139">ready for OPEN</text>
+        <rect x="708" y="83" width="168" height="74" rx="10" fill="#eaf3ff" stroke="#bfd5ef"/><text class="heading blue-text" x="765" y="115">OPEN</text><text class="small" x="735" y="139">ready to finish rep</text>
+        <path class="edge" marker-end="url(#state-arrow)" d="M204 119H359"/><text x="217" y="102">confirm CLOSED</text>
+        <path class="edge" marker-end="url(#state-arrow)" d="M546 119H701"/><text x="566" y="102">confirm OPEN</text>
+        <path class="edge" marker-end="url(#state-arrow)" d="M792 157V206H457V164"/>
+        <text class="green-text" x="503" y="194">confirm CLOSED → +1 rep</text>
+        <path class="edge" marker-end="url(#state-arrow)" d="M65 83V31H165V76"/>
+        <text class="small" x="229" y="36">Confirmed OPEN while UNKNOWN stays UNKNOWN.</text>
+        <rect x="24" y="240" width="852" height="67" rx="8" fill="#fff4d9"/>
+        <text x="42" y="266">Valid dead band: keep stable phase; cancel the pending timer.</text>
+        <text x="42" y="289">Invalid joint/scale, loss or continuity break: reset phase and pending timer to UNKNOWN.</text>
+      </svg>
+      </div>
+      <figcaption>Repeated confirmation of the current stable posture does not add repetitions. Only the confirmed OPEN → CLOSED edge increments the counter.</figcaption>
+    </figure>
+  </section>
+
+  <section id="time">
+    <h2>07 · Temporal confirmation is not a frame count</h2>
+    <div class="lab" id="sequence-lab">
+      <h3>Step through the counter</h3>
+      <p>Each click delivers one synthetic <code>PosePacket</code>. Compare the current spatial label with the pending timer and stable phase. Only a confirmed <strong>OPEN → CLOSED</strong> edge adds a rep.</p>
+      <div class="scenario-controls">
+        <label for="scenario"><strong>Example sequence</strong></label>
+        <select id="scenario">
+          <option value="cycle">Complete CLOSED → OPEN → CLOSED</option>
+          <option value="startOpen">Start OPEN: cycle is not armed</option>
+          <option value="brief">Brief OPEN: confirmation fails</option>
+          <option value="dead">Dead band cancels the pending timer</option>
+          <option value="invalid">Low-confidence ankle resets the phase</option>
+          <option value="loss">Tracking loss: establish CLOSED again</option>
+          <option value="gap">Sample gap over 0.5 s resets the phase</option>
+        </select>
+      </div>
+      <div class="buttons">
+        <button type="button" id="next-sample">Next sample</button>
+        <button type="button" id="run-sequence">Run remaining samples</button>
+        <button type="button" id="reset-sequence">Restart sequence</button>
+      </div>
+      <div class="metrics" aria-live="polite">
+        <div class="metric">Current posture<strong id="sim-raw">—</strong></div>
+        <div class="metric">Stable phase<strong id="sim-state">UNKNOWN</strong></div>
+        <div class="metric">Pending duration<strong id="sim-pending">—</strong></div>
+        <div class="metric">Repetitions<strong id="sim-reps">0</strong></div>
+      </div>
+      <p id="sim-explanation" aria-live="polite">Ready. The first CLOSED observation starts the 60 ms timer.</p>
+      <div class="table-wrap sample-log"><table>
+        <caption id="sim-caption">0 samples delivered. Times are session-relative seconds.</caption>
+        <thead><tr><th>Frame / time</th><th>Posture</th><th>Pending</th><th>Stable phase</th><th>Reps</th></tr></thead>
+        <tbody id="sim-log"></tbody>
+      </table></div>
+      <p class="lab-note">This browser demonstration translates the inspected Python counter and uses synthetic float32 poses. It runs synchronously; the application's accepted display count can lag its background worker. It does not access your camera or modify the application, configuration, or recordings.</p>
+    </div>
+    <p>When a classified posture differs from <code>pending</code>, the counter starts a new timer at that packet’s timestamp. The posture is eligible to update the stable phase when:</p>
+    <div class="formula">packet.timestamp − pending_since ≥ confirm_seconds = 0.06 seconds</div>
+    <p>All <strong>processed observations</strong> within that candidate run must classify as the same posture. A different classified posture starts a new run; a dead-band sample cancels the run. Invalidity or a continuity break resets the phase as well.</p>
+    <figure>
+      <div class="diagram">
+      <svg class="wide" viewBox="0 0 900 336" role="img" aria-labelledby="time-title time-desc" xmlns="http://www.w3.org/2000/svg">
+        <title id="time-title">A dead-band sample restarts an open-posture confirmation</title>
+        <desc id="time-desc">Starting from stable closed, open samples occur at 0 and 33 milliseconds. A dead-band sample at 50 milliseconds cancels confirmation. Open samples at 67, 100 and 134 milliseconds form a new run, which confirms at 134 because 67 milliseconds have elapsed. Stable state stays closed until that point.</desc>
+        <text class="heading" x="20" y="26">Example: stable CLOSED before the first sample</text>
+        <text class="small" x="20" y="48">Illustrative timestamps; dots represent processed observations, not assumed continuous motion.</text>
+        <text x="20" y="103">Raw posture</text><text x="20" y="180">Pending run</text><text x="20" y="257">Stable phase</text>
+        <line x1="185" y1="101" x2="848" y2="101" stroke="#d8e1eb" stroke-width="2"/>
+        <circle cx="190" cy="101" r="8" fill="#1b61ad"/><circle cx="353" cy="101" r="8" fill="#1b61ad"/><rect x="429" y="93" width="16" height="16" fill="#ba8620"/>
+        <circle cx="521" cy="101" r="8" fill="#1b61ad"/><circle cx="684" cy="101" r="8" fill="#1b61ad"/><circle cx="852" cy="101" r="8" fill="#1b61ad"/>
+        <text class="small" x="177" y="83">OPEN</text><text class="small" x="337" y="83">OPEN</text><text class="small" x="411" y="83">DEAD</text><text class="small" x="505" y="83">OPEN</text><text class="small" x="668" y="83">OPEN</text><text class="small" x="827" y="83">OPEN</text>
+        <rect x="190" y="161" width="247" height="31" fill="#eaf3ff"/><rect x="521" y="161" width="331" height="31" fill="#eaf3ff"/>
+        <text class="small" x="211" y="182">0 → 33 ms, then cancelled</text><text class="small" x="548" y="182">restart at 67; elapsed = 67 ms</text>
+        <path d="M437 142L437 207" stroke="#ba8620" stroke-width="2" stroke-dasharray="5 4"/>
+        <path d="M852 131V273" stroke="#1b61ad" stroke-width="2" stroke-dasharray="5 4"/>
+        <rect x="190" y="238" width="662" height="31" fill="#e9f5ee"/><rect x="852" y="238" width="28" height="31" fill="#eaf3ff"/>
+        <text class="green-text" x="433" y="259">CLOSED</text><text class="small blue-text" x="735" y="226">now confirm OPEN</text>
+        <text x="182" y="303">0</text><text x="344" y="303">33</text><text x="428" y="303">50</text><text x="512" y="303">67</text><text x="670" y="303">100</text><text x="838" y="303">134</text>
+        <text class="small" x="332" y="328">Time since the first illustrated observation (milliseconds)</text>
+      </svg>
+      </div>
+      <figcaption>The counter does not confirm at 100 ms in this example. It measures from the new run’s start at 67 ms, not from the first OPEN observation at 0 ms. Confirmation occurs only while processing a qualifying packet.</figcaption>
+    </figure>
+    <div class="table-wrap"><table>
+      <caption>Ideal regular sampling examples, with the first matching observation at t = 0.</caption>
+      <thead><tr><th>Processed sample rate</th><th>Observation times</th><th>First ≥ 60 ms confirmation</th></tr></thead>
+      <tbody><tr><td>30 Hz</td><td>0, 33.3, 66.7 ms</td><td>3rd matching sample</td></tr><tr><td>60 Hz</td><td>0, 16.7, 33.3, 50.0, 66.7 ms</td><td>5th matching sample</td></tr><tr><td>15 Hz</td><td>0, 66.7 ms</td><td>2nd matching sample</td></tr></tbody>
+    </table></div>
+    <p>There is no fixed “three frames” rule. There is also no separate minimum rep duration, no maximum duration for the whole CLOSED → OPEN → CLOSED cycle, and no automatic phase expiration while valid intermediate poses keep arriving with allowed gaps.</p>
+    <div class="callout warn"><p><strong>“Continuous” means continuous in the observations the worker processed.</strong> Two matching samples 70 ms apart can confirm a posture, provided the packet gap is permitted and continuity is unchanged. The code cannot prove what happened between them. A dropped dead-band sample can change the live result relative to an all-samples replay. Recorded generation changes protect against missed loss/recovery notifications, but cannot reconstruct every skipped posture.</p></div>
+  </section>
+
+  <section id="resets">
+    <h2>08 · Continuity, resets and count ownership</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Event</th><th>Stable phase / pending</th><th>Counter total</th></tr></thead>
+      <tbody>
+        <tr><td>Duplicate or older <code>frame_index</code></td><td>No change; return immediately, before any other checks.</td><td>No change.</td></tr>
+        <tr><td>New generation or selected track ID</td><td>Reset to UNKNOWN; clear pending. Then process the current packet.</td><td>Set to <code>packet.accepted_reps</code>.</td></tr>
+        <tr><td>Same continuity, timestamp gap &lt; 0 or &gt; 0.5 s</td><td>Reset to UNKNOWN; clear pending. Then process the current packet.</td><td>Keep total.</td></tr>
+        <tr><td><code>present == False</code></td><td>Reset to UNKNOWN; clear pending; do not classify.</td><td>Keep total after any continuity reseeding.</td></tr>
+        <tr><td>Bad required joint, width &lt; 0.01, or span ≤ 0</td><td>Reset to UNKNOWN; clear pending.</td><td>Keep total.</td></tr>
+        <tr><td>Valid geometry, neither posture passes</td><td>Keep stable phase; clear pending only.</td><td>Keep total.</td></tr>
+        <tr><td>Confirmed OPEN → CLOSED</td><td>Change stable phase to CLOSED.</td><td>Add one.</td></tr>
+      </tbody>
+    </table></div>
+    <p>The sample-gap test compares the current packet timestamp with the <strong>previous processed packet</strong>, not the previous valid pose and not necessarily the previous camera frame. The timestamp/frame bookkeeping is updated even for missing or invalid poses. A gap of exactly 0.5 seconds is permitted; a larger gap is not.</p>
+    <h3>Why a generation exists in addition to a track ID</h3>
+    <p>The main controller increments <code>generation</code> at session start, when the selected person is lost, and when the person is reacquired. Even if the worker’s mailbox overwrites the missing-person packet, the next packet carries a different generation. The worker then abandons the interrupted cycle. Reacquiring the <em>same</em> tracker ID is still a continuity break.</p>
+    <div class="formula">confirmed CLOSED → confirmed OPEN → person lost → UNKNOWN<br>person returns still OPEN → remains UNKNOWN<br>must confirm CLOSED, then OPEN, then CLOSED again to add a new rep</div>
+    <p><code>reset_phase()</code> itself only changes <code>state</code> and <code>pending</code>; it does not zero the repetition total. On identity/generation changes, <code>update()</code> separately reseeds the worker’s count from the main process’s accepted total. That can discard a worker increment which the main process had not yet accepted before the break.</p>
+    <h3>The live count is accepted asynchronously</h3>
+    <p><code>SessionController.accept_status()</code> checks that the person is tracked, the status has no error, the generation matches, and the processed frame is newer than the last accepted one but not ahead of the last submitted packet. It keeps the maximum of its current count and the accepted worker count. Final shutdown has a special tracked check based on the last packet’s presence.</p>
+    <p>As a result, a saved per-frame <code>rep_counts[i]</code> is the <strong>main process’s accepted count at recording time</strong>, not necessarily the counter’s result after analyzing that exact pose. The final metadata count can reflect an additional accepted status drained at shutdown.</p>
+    <h3>Selection gestures are separate rules</h3>
+    <p>Session start uses an anatomical right-hand gesture: right wrist y &lt; nose y <em>and</em> right elbow y &lt; right shoulder y, with required-joint confidence ≥ 0.5. The hold is 2 seconds to start and 1 second to deliberately select a replacement after loss, with a 0.15-second missing-observation grace. A confidently lowered hand cancels that gesture hold. The current session target is 180 seconds (3 minutes).</p>
+    <p>These values come from <code>workout/gesture.py</code> and <code>workout/session.py</code>. They are not jumping-jack thresholds. In particular, a raised-hand start gesture does not arm the counter: the user still needs a confirmed CLOSED posture first. Gesture grace is not an invalid-joint grace period for exercise counting.</p>
+  </section>
+
+  <section id="code">
+    <h2>09 · Read the code in two layers</h2>
+    <p>The counter starts with <code>state = UNKNOWN</code>, <code>rep_count = 0</code>, and <code>pending = None</code>. <code>reset_phase()</code> restores UNKNOWN and clears the pending posture; it preserves the repetition total. Geometry decides the current posture in <code>classify()</code>; continuity, elapsed time and remembered state decide whether it counts in <code>update()</code>.</p>
+    <h3>Layer A: classify the current pose</h3>
+    <p>This compact version uses the same comparisons as <code>classify()</code>. Variable names are expanded for readability; it is explanatory code, not a replacement file. Notice the reset in the invalid branches and its absence in the final dead-band branch.</p>
+    <pre><code>needed = (LEFT_SHOULDER, RIGHT_SHOULDER,
+          LEFT_WRIST, RIGHT_WRIST, LEFT_ANKLE, RIGHT_ANKLE)
+
+if not valid_keypoints(pose, needed, cfg.confidence):
+    self.reset_phase()
+    return None                          # INVALID: stable phase lost
+
+width = abs(float(pose[LEFT_SHOULDER, 0] - pose[RIGHT_SHOULDER, 0]))
+span = float((pose[LEFT_ANKLE, 1] + pose[RIGHT_ANKLE, 1]
+              - pose[LEFT_SHOULDER, 1] - pose[RIGHT_SHOULDER, 1]) / 2)
+
+if width &lt; cfg.minimum_shoulder_width or span &lt;= 0:
+    self.reset_phase()
+    return None                          # INVALID: unusable body scale
+
+ratio = abs(float(pose[LEFT_ANKLE, 0] - pose[RIGHT_ANKLE, 0])) / width
+left = float(pose[LEFT_WRIST, 1] - pose[LEFT_SHOULDER, 1])
+right = float(pose[RIGHT_WRIST, 1] - pose[RIGHT_SHOULDER, 1])
+margin = cfg.wrist_margin * span
+
+if left &gt; margin and right &gt; margin and ratio &lt;= cfg.closed_ankle_ratio:
+    return ExerciseState.CLOSED
+if left &lt; -margin and right &lt; -margin and ratio &gt;= cfg.open_ankle_ratio:
+    return ExerciseState.OPEN
+
+return None                              # DEAD BAND: stable phase retained</code></pre>
+    <h3>Layer B: apply continuity, confirmation and sequence</h3>
+    <p>The following is the current <code>update()</code> logic, with comments added to mark the stages. The early-return order matters: old frames are ignored first, identity changes take precedence over the sample-gap branch, and spatial classification happens after those checks.</p>
+    <pre><code>def update(self, packet: PosePacket) -&gt; int:
+    # 1. Ignore stale / duplicate work.
+    if packet.frame_index &lt;= self.last_frame:
+        return self.rep_count
+
+    # 2. Reset interrupted phase; identity changes reseed accepted reps.
+    changed = (
+        packet.generation != self.generation
+        or packet.selected_track_id != self.track_id
+    )
+    if changed:
+        self.reset_phase()
+        self.rep_count = packet.accepted_reps
+    elif (
+        self.last_timestamp is not None
+        and not 0
+        &lt;= packet.timestamp - self.last_timestamp
+        &lt;= self.config.max_sample_gap
+    ):
+        self.reset_phase()
+
+    self.generation = packet.generation
+    self.track_id = packet.selected_track_id
+    self.last_timestamp = packet.timestamp
+    self.last_frame = packet.frame_index
+
+    # 3. Missing / invalid / intermediate poses are different cases.
+    if not packet.present:
+        self.reset_phase()
+        return self.rep_count
+    posture = self.classify(packet.pose)
+    if posture is None:
+        self.pending = None
+        return self.rep_count
+
+    # 4. Confirm a run of matching processed observations.
+    if posture != self.pending:
+        self.pending, self.pending_since = posture, packet.timestamp
+    if packet.timestamp - self.pending_since &lt; self.config.confirm_seconds:
+        return self.rep_count
+
+    # 5. Arm from CLOSED; count only a confirmed OPEN -&gt; CLOSED edge.
+    if self.state == ExerciseState.UNKNOWN:
+        if posture == ExerciseState.CLOSED:
+            self.state = ExerciseState.CLOSED
+    elif posture != self.state:
+        if self.state == ExerciseState.OPEN and posture == ExerciseState.CLOSED:
+            self.rep_count += 1
+        self.state = posture
+    return self.rep_count</code></pre>
+    <p class="source">Source: <a href="../workout/analysis/jumping_jack.py">jumping_jack.py · classify at line 54; update at line 90</a>.</p>
+    <h3>A small reproducible sequence</h3>
+    <pre><code>import numpy as np
+from workout.analysis.jumping_jack import JumpingJackCounter
+from workout.packets import PosePacket
+
+def make_pose(opened):
+    p = np.full((17, 3), 0.5, dtype=np.float32)
+    p[:, 2] = 0.99
+    p[5, :2], p[6, :2] = (0.4, 0.4), (0.6, 0.4)
+    p[9, 1] = p[10, 1] = 0.1 if opened else 0.65
+    p[15, :2], p[16, :2] = (
+        ((0.25, 0.9), (0.75, 0.9)) if opened
+        else ((0.45, 0.9), (0.55, 0.9))
+    )
+    return p
+
+counter = JumpingJackCounter()
+for frame in range(9):
+    opened = 3 &lt;= frame &lt; 6       # closed x3, open x3, closed x3
+    packet = PosePacket(
+        frame_index=frame,
+        timestamp=frame * 0.04,    # 40 ms sample spacing
+        selected_track_id=7,
+        pose=make_pose(opened),
+        present=True,
+        generation=1,
+        accepted_reps=0,
+    )
+    counter.update(packet)
+    print(frame, counter.state.value, counter.rep_count)
+
+assert counter.rep_count == 1      # counted on the final sample at t = 0.32 s</code></pre>
+    <p>The first run confirms CLOSED at 0.08 s, the second confirms OPEN at 0.20 s, and the final run confirms CLOSED at 0.32 s. Changing the first three poses to OPEN does not supply the initial CLOSED phase and therefore does not produce that rep.</p>
+  </section>
+
+  <section id="recording">
+    <h2>10 · What an offline replay can and cannot prove</h2>
+    <p><a href="debug.py">sessions/debug.py</a> feeds <strong>every recorded pose</strong> into the real current <code>JumpingJackCounter</code>, in source frame order, using recorded timestamps, presence, selected IDs and generations. It precomputes the result before playback. Seeking, displaying at 0.5× speed or skipping displayed frames cannot change that precomputed count.</p>
+    <p>The debugger carries its own accepted repetition total across generations. It does not reproduce live status acknowledgments from the main process. The NPZ stores poses, timestamps, frame indices, presence, observed IDs, generations, accepted per-frame counts, final metadata and session events. It does <strong>not</strong> store the original camera video, the original analysis configuration, or the full sequence of worker deliveries and accepted/rejected statuses.</p>
+    <div class="callout"><p>Use replay to answer “which gates and state transitions does the current code produce from these stored keypoints?” Do not treat it as proof of what the person physically did, or as an exact reconstruction of a live worker schedule when packets/statuses were dropped.</p></div>
+    <h3>Historical example from a recording</h3>
+    <p>The following statistics were documented for <code>workout_20260913T021156_404330Z.npz</code> in the earlier 2026-09-13 guide. They used the historical baseline CLOSED ratio 1.25 and OPEN ratio 1.8. They are retained as a file-specific example, not fresh measurements with the current defaults (CLOSED 1.0, OPEN 1.4) or a manual ground-truth count of exercises.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Observation</th><th>Result</th><th>Interpretation</th></tr></thead>
+      <tbody>
+        <tr><td>Samples / selected-person missing samples</td><td class="num">1,618 / 499</td><td>Missing samples reset the cycle phase.</td></tr>
+        <tr><td>Reported analysis packets processed / dropped</td><td class="num">1,618 / 0</td><td>No pose-packet loss reported for this run.</td></tr>
+        <tr><td>Saved live final reps / historical-baseline offline reps</td><td class="num">1 / 1</td><td>The historical-baseline all-samples replay reproduces the final total.</td></tr>
+        <tr><td>Samples satisfying the full OPEN pose</td><td class="num">9</td><td>All three OPEN gates passed together in only nine observations.</td></tr>
+        <tr><td>Valid geometry with both OPEN wrist gates passing</td><td class="num">365</td><td>These are candidate arms-up samples with usable required joints and body scale.</td></tr>
+        <tr><td>Of those, samples failing the OPEN ankle gate</td><td class="num">356 of 365</td><td>The ratio remained below 1.8 in most of these samples.</td></tr>
+        <tr><td>Offline reps with only open ratio changed to 1.6</td><td class="num">7</td><td>A sensitivity test, not a validated correction or a ground-truth count.</td></tr>
+      </tbody>
+    </table></div>
+    <p>The ankle opening threshold is therefore a concrete gate to inspect in this recording. This does not establish whether the threshold is inappropriate, the stance is narrow, perspective changes the body scale, or ankle/shoulder inference is inaccurate. Those explanations require visual ground truth. Increasing the model size does not change the counter’s thresholds.</p>
+    <pre><code># Open the latest recording with spatial/timing overlays.
+.\.venv\Scripts\python.exe sessions\debug.py
+
+# Inspect a near-open example while paused.
+.\.venv\Scripts\python.exe sessions\debug.py --start 6.606 --paused
+
+# Print the diagnostic sample counts without a window.
+.\.venv\Scripts\python.exe sessions\debug.py --summary
+
+# A reversible, in-memory sensitivity test; does not edit production code.
+.\.venv\Scripts\python.exe sessions\debug.py --closed-ankle-ratio 1.25 --open-ankle-ratio 1.6</code></pre>
+    <p>To reproduce the exact file-specific statistics later, pass the NPZ filename explicitly rather than relying on the “latest recording” default. For the historical baseline, also pass <code>--closed-ankle-ratio 1.25 --open-ankle-ratio 1.8</code>; the sensitivity command above changes only OPEN from that baseline.</p>
+  </section>
+
+  <section id="debugging">
+    <h2>11 · A practical diagnosis order</h2>
+    <ol>
+      <li><strong>Confirm the selected person exists.</strong> Check presence, observed ID and generation. A skeleton disappearing or a new generation explains a phase reset before any exercise thresholds matter.</li>
+      <li><strong>Check all six required joints.</strong> Look for confidence below the threshold or NaN x/y. A single bad ankle can invalidate an otherwise convincing arms-up pose.</li>
+      <li><strong>Inspect the body reference.</strong> Shoulder width is horizontal, not an anatomical 3D measurement. Body rotation or a misplaced shoulder changes both ankle thresholds. A changing vertical span moves both wrist limits.</li>
+      <li><strong>Check the three gates in one frame.</strong> Both wrists and feet must agree on OPEN or CLOSED simultaneously. Independent peaks at different times do not qualify.</li>
+      <li><strong>Watch pending time, not just the raw label.</strong> OPEN for 33 ms followed by dead band is not confirmed OPEN, even if an OPEN label briefly appears.</li>
+      <li><strong>Watch stable phase.</strong> UNKNOWN cannot start from OPEN. After loss or invalidity, a fresh CLOSED phase is required. A frame may be spatially CLOSED but still have a pending timer.</li>
+      <li><strong>Inspect gaps and worker health.</strong> A &gt; 0.5-second processed-packet gap resets the phase. Packet drops can affect which intermediate observations are seen. Check the saved worker error and forced-shutdown metadata too.</li>
+      <li><strong>Compare default replay with saved live counts.</strong> Matching final totals support the geometric/state explanation. Differences require checking source-config drift, packet delivery and status acceptance before blaming a single threshold.</li>
+      <li><strong>Change one threshold in replay only.</strong> Observe which previously blocked transitions appear. More counted reps alone does not demonstrate better accuracy; verify against the actual motion before changing production settings.</li>
+    </ol>
+    <p>Debugger controls: <code>Space</code> pauses; <code>[</code>/<code>]</code> steps one sample; <code>N</code>/<code>P</code> moves between posture/phase/reset events; clicking a threshold row and using <code>,</code>/<code>.</code> adjusts it in memory; <code>B</code> restores source defaults; <code>H</code> explains formulas and limitations.</p>
+  </section>
+
+  <section id="sources">
+    <h2>12 · Source map and scope</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Local source</th><th>Relevant responsibility</th></tr></thead>
+      <tbody>
+        <tr><td><a href="../workout/analysis/jumping_jack.py">workout/analysis/jumping_jack.py</a></td><td>Configuration, validity/geometry classification, pending timer, stable phase and rep transitions. Config line 26, classify line 54, update line 90.</td></tr>
+        <tr><td><a href="../workout/packets.py">workout/packets.py</a></td><td>Keypoint indices, confidence threshold, cleaning and packet/status contracts. clean_pose line 13, valid_keypoints line 27.</td></tr>
+        <tr><td><a href="../workout/tracking.py">workout/tracking.py</a></td><td>Current-frame pose/ID extraction and normalization. tracked_people line 40.</td></tr>
+        <tr><td><a href="../workout/session.py">workout/session.py</a></td><td>Selection, loss/recovery generations, accepted live counts and recording order. Continuity reset line 74, status acceptance line 78, frame processing line 98.</td></tr>
+        <tr><td><a href="../workout/analysis/worker.py">workout/analysis/worker.py</a></td><td>Nonblocking latest-value mailbox, worker execution and asynchronous status publication.</td></tr>
+        <tr><td><a href="../workout/recorder.py">workout/recorder.py</a></td><td>Owned per-frame history, missing sentinels, metadata and NPZ saving.</td></tr>
+        <tr><td><a href="../workout/gesture.py">workout/gesture.py</a></td><td>Right-hand session-selection gesture; separate from jumping-jack analysis.</td></tr>
+        <tr><td><a href="debug.py">sessions/debug.py</a></td><td>Read-only diagnostic playback, gate overlays, all-samples replay and threshold experiments.</td></tr>
+        <tr><td><a href="../tests/test_jumping_jack.py">tests/test_jumping_jack.py</a></td><td>Sequence, jitter, loss, invalid-joint, gap and duplicate-frame regression tests.</td></tr>
+      </tbody>
+    </table></div>
+    <p>This document describes the application source and installed coordinate conversion as inspected on <strong>2026-10-07</strong>. Source line references and copied logic are a snapshot, not an automatically updating specification. The counter source SHA-256 at inspection is <code id="source-hash">BFB332CB05A23E443FAC8EA314898126BE6E600031E0F9DC4DB88C5A63302016</code>.</p>
+    <p>The guide and debugger are separate additions. Creating them does not alter <code>workout_session.py</code>, the analyzer, tracker, recorder or saved session data.</p>
+  </section>
+  <footer>PoseSense · Local implementation documentation · Inline SVG diagrams and all styling are embedded. Open directly in a browser; use the browser’s Print command for a print-friendly layout.</footer>
+</main>
+<script>
+(() => {
+  "use strict";
+  const f32 = Math.fround;
+  const required = [5, 6, 9, 10, 15, 16];
+  const names = {5: "Left shoulder", 6: "Right shoulder", 9: "Left wrist", 10: "Right wrist", 15: "Left ankle", 16: "Right ankle"};
+  const defaults = Object.freeze({confidence: .5, closed: 1.0, open: 1.4, margin: .1, confirm: .06, gap: .5, width: .01});
+  function makePose(width = .2, ratio = .5, left = .5, right = .5, confidence = .99) {
+    const pose = Array.from({length: 17}, () => [.5, .5, f32(.99)]);
+    // Anatomical left appears on the right in a frontal, unmirrored image.
+    pose[5] = [.5 + width / 2, .35, .99];
+    pose[6] = [.5 - width / 2, .35, .99];
+    pose[9] = [.75, .35 + left * .5, .99];
+    pose[10] = [.25, .35 + right * .5, .99];
+    pose[15] = [.5 + width * ratio / 2, .85, confidence];
+    pose[16] = [.5 - width * ratio / 2, .85, .99];
+    return pose.map(row => row.map(f32));
+  }
+  function inspectPose(pose) {
+    const bad = required.filter(i => !pose[i].every(Number.isFinite) || pose[i][2] < defaults.confidence);
+    if (bad.length) return {kind: "INVALID", why: "Unreliable joint: " + bad.map(i => names[i]).join(", ")};
+    // Match the float32 operations performed on NumPy pose elements.
+    const width = Math.abs(f32(pose[5][0] - pose[6][0]));
+    const span = f32(f32(f32(f32(pose[15][1] + pose[16][1]) - pose[5][1]) - pose[6][1]) / 2);
+    if (width < defaults.width || span <= 0) return {kind: "INVALID", why: "Shoulder width < 0.01 or body span <= 0", width, span};
+    const ratio = Math.abs(f32(pose[15][0] - pose[16][0])) / width;
+    const left = f32(pose[9][1] - pose[5][1]);
+    const right = f32(pose[10][1] - pose[6][1]);
+    const margin = defaults.margin * span;
+    const closed = [left > margin, right > margin, ratio <= defaults.closed];
+    const open = [left < -margin, right < -margin, ratio >= defaults.open];
+    const kind = closed.every(Boolean) ? "CLOSED" : open.every(Boolean) ? "OPEN" : "DEAD BAND";
+    return {kind, width, span, ratio, left, right, margin, closed, open};
+  }
+  class DemoCounter {
+    constructor() {
+      this.state = "UNKNOWN"; this.repCount = 0; this.generation = null; this.trackId = null;
+      this.lastTime = null; this.lastFrame = -1; this.pending = null; this.pendingSince = 0;
+      this.reason = "Ready. The first CLOSED observation starts the 60 ms timer.";
+    }
+    resetPhase() { this.state = "UNKNOWN"; this.pending = null; }
+    update(packet) {
+      if (packet.frame <= this.lastFrame) { this.reason = "Older or duplicate frame: ignored."; return; }
+      let prefix = "";
+      if (packet.generation !== this.generation || packet.trackId !== this.trackId) {
+        this.resetPhase(); this.repCount = packet.acceptedReps;
+        prefix = "New continuity: UNKNOWN; count reseeded from accepted reps. ";
+      } else if (this.lastTime !== null && !(0 <= packet.time - this.lastTime && packet.time - this.lastTime <= defaults.gap)) {
+        this.resetPhase(); prefix = "Sample gap outside [0, 0.5 s]: phase reset. ";
+      }
+      this.generation = packet.generation; this.trackId = packet.trackId;
+      this.lastTime = packet.time; this.lastFrame = packet.frame;
+      if (!packet.present) { this.resetPhase(); this.reason = prefix + "Selected person missing: phase reset."; return; }
+      const checked = inspectPose(packet.pose);
+      if (checked.kind === "INVALID") {
+        this.resetPhase(); this.reason = prefix + checked.why + ". Phase reset."; return;
+      }
+      if (checked.kind === "DEAD BAND") {
+        this.pending = null; this.reason = prefix + "Dead band: keep stable phase; cancel pending confirmation."; return;
+      }
+      const posture = checked.kind;
+      if (posture !== this.pending) { this.pending = posture; this.pendingSince = packet.time; }
+      const duration = packet.time - this.pendingSince;
+      if (duration < defaults.confirm) {
+        this.reason = prefix + posture + " observed for " + Math.round(duration * 1000) + " ms; needs at least 60 ms."; return;
+      }
+      const before = this.state;
+      if (this.state === "UNKNOWN") {
+        if (posture === "CLOSED") this.state = "CLOSED";
+      } else if (posture !== this.state) {
+        if (this.state === "OPEN" && posture === "CLOSED") this.repCount++;
+        this.state = posture;
+      }
+      this.reason = prefix + (before === "OPEN" && this.state === "CLOSED" ? "Confirmed OPEN → CLOSED: +1 rep." :
+        before === "UNKNOWN" && posture === "OPEN" ? "OPEN confirmed, but UNKNOWN must first establish CLOSED. No rep." :
+        before !== this.state ? "Confirmed " + posture + ": stable phase changed. No rep yet." : "Confirmed " + posture + ": stable phase retained.");
+    }
+  }
+  function sample(time, kind, extra = {}) {
+    const poses = {
+      closed: () => makePose(), open: () => makePose(.2, 2.5, -.5, -.5),
+      dead: () => makePose(.2, 1.2, -.5, -.5), invalid: () => makePose(.2, .5, .5, .5, .1)
+    };
+    return {time, pose: (poses[kind] || poses.closed)(), present: kind !== "missing", generation: 1, trackId: 7, acceptedReps: 0, ...extra};
+  }
+  const run = (kind, start, extra = {}) => [0, .04, .08].map(dt => sample(start + dt, kind, extra));
+  const scenarios = {
+    cycle: [...run("closed", 0), ...run("open", .12), ...run("closed", .24)],
+    startOpen: [...run("open", 0), ...run("closed", .12)],
+    brief: [...run("closed", 0), sample(.12, "open"), ...run("closed", .16)],
+    dead: [...run("closed", 0), sample(.12, "open"), sample(.16, "open"), sample(.18, "dead"), ...run("open", .20), ...run("closed", .32)],
+    invalid: [...run("closed", 0), ...run("open", .12), sample(.24, "invalid"), ...run("closed", .28)],
+    loss: [...run("closed", 0), ...run("open", .12), sample(.24, "missing", {generation: 2}), ...run("open", .28, {generation: 3}), ...run("closed", .40, {generation: 3}), ...run("open", .52, {generation: 3}), ...run("closed", .64, {generation: 3})],
+    gap: [...run("closed", 0), ...run("open", .12), ...run("closed", 1)]
+  };
+  const $ = id => document.getElementById(id);
+  const numeric = value => Number(value).toFixed(4);
+  const inputIds = ["shoulder-width", "ankle-ratio", "left-wrist", "right-wrist", "joint-confidence"];
+  const tagClass = kind => ({CLOSED: "closed", OPEN: "open", "DEAD BAND": "dead", INVALID: "invalid", MISSING: "invalid", UNKNOWN: "unknown"}[kind] || "unknown");
+  function renderPose() {
+    const values = inputIds.map(id => Number($(id).value));
+    inputIds.forEach((id, i) => { $(id + "-value").textContent = (i === 2 || i === 3 ? (values[i] >= 0 ? "+" : "") : "") + values[i].toFixed(id === "shoulder-width" ? 3 : 2); });
+    const pose = makePose(...values);
+    const measured = inspectPose(pose);
+    $("pose-label").textContent = measured.kind; $("pose-label").className = "tag " + tagClass(measured.kind);
+    $("pose-rows").textContent = required.map(i => String(i).padStart(2) + " " + names[i].padEnd(15) + " [" + pose[i].map(numeric).join(", ") + "]").join("\n");
+    $("pose-gates").replaceChildren();
+    if (measured.kind === "INVALID") {
+      const li = document.createElement("li"); li.textContent = measured.why + ". The counter resets to UNKNOWN."; $("pose-gates").append(li);
+      $("pose-measurements").textContent = "Invalid required joint or body reference. No posture is classified.";
+    } else {
+      ["OPEN", "CLOSED"].forEach(phase => {
+        const li = document.createElement("li");
+        const checks = phase === "OPEN" ? measured.open : measured.closed;
+        li.textContent = phase + " · left wrist " + (checks[0] ? "PASS" : "FAIL") + " · right wrist " + (checks[1] ? "PASS" : "FAIL") + " · feet " + (checks[2] ? "PASS" : "FAIL");
+        $("pose-gates").append(li);
+      });
+      $("pose-measurements").textContent = "width = " + numeric(measured.width) + "; span = " + numeric(measured.span) + "; margin = " + numeric(measured.margin) + "\nankle ratio = " + numeric(measured.ratio) + "; wrist deltas = " + numeric(measured.left) + ", " + numeric(measured.right);
+    }
+    const xy = i => [20 + 600 * pose[i][0], 20 + 337.5 * pose[i][1]];
+    const p = i => xy(i).map(n => n.toFixed(2)).join(" ");
+    const hipL = "350 230", hipR = "290 230";
+    $("lab-body").setAttribute("d", "M" + p(5) + "L" + p(6) + "L" + hipR + "L" + hipL + "Z M" + p(5) + "L" + p(9) + " M" + p(6) + "L" + p(10) + " M" + hipL + "L" + p(15) + " M" + hipR + "L" + p(16));
+    $("lab-shoulders").setAttribute("d", "M" + p(5) + "L" + p(6));
+    $("lab-feet").setAttribute("d", "M" + p(15) + "L" + p(16));
+    $("lab-open-line").setAttribute("d", "M40 " + (20 + 337.5 * .30) + "H600");
+    $("lab-closed-line").setAttribute("d", "M40 " + (20 + 337.5 * .40) + "H600");
+    $("lab-joints").replaceChildren();
+    required.forEach(i => {
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      circle.setAttribute("cx", xy(i)[0]); circle.setAttribute("cy", xy(i)[1]); circle.setAttribute("r", "5");
+      circle.setAttribute("fill", pose[i][2] < .5 ? "#a8323c" : "white");
+      circle.setAttribute("stroke", [5, 9, 15].includes(i) ? "#1b61ad" : "#855900");
+      circle.setAttribute("stroke-width", "2.5"); $("lab-joints").append(circle);
+    });
+  }
+  inputIds.forEach(id => $(id).addEventListener("input", renderPose));
+  document.querySelectorAll("[data-pose]").forEach(button => button.addEventListener("click", () => {
+    const values = button.dataset.pose === "closed" ? [.2, .5, .5, .5, .99] : [.2, button.dataset.pose === "open" ? 2.5 : 1.2, -.5, -.5, .99];
+    inputIds.forEach((id, i) => { $(id).value = values[i]; }); renderPose();
+  }));
+  let counter, cursor, plan;
+  function resetSequence() {
+    counter = new DemoCounter(); cursor = 0; plan = scenarios[$("scenario").value];
+    $("sim-log").replaceChildren(); $("sim-raw").textContent = "—";
+    $("sim-state").textContent = "UNKNOWN"; $("sim-pending").textContent = "—"; $("sim-reps").textContent = "0";
+    $("sim-explanation").textContent = "Ready. Step through the selected sequence to observe each decision.";
+    $("sim-caption").textContent = "0 / " + plan.length + " samples delivered. Times are session-relative seconds.";
+    $("next-sample").disabled = false; $("run-sequence").disabled = false;
+  }
+  function nextSample() {
+    if (cursor >= plan.length) return;
+    const packet = {...plan[cursor], frame: cursor};
+    const raw = packet.present ? inspectPose(packet.pose).kind : "MISSING";
+    counter.update(packet); cursor++;
+    const elapsed = counter.pending === null ? "—" : Math.round((packet.time - counter.pendingSince) * 1000) + " ms";
+    $("sim-raw").textContent = raw; $("sim-state").textContent = counter.state;
+    $("sim-pending").textContent = elapsed; $("sim-reps").textContent = counter.repCount;
+    $("sim-explanation").textContent = counter.reason;
+    const tr = document.createElement("tr");
+    [packet.frame + " / " + packet.time.toFixed(2) + " s", raw, counter.pending === null ? "—" : counter.pending + " · " + elapsed, counter.state, counter.repCount].forEach(value => {
+      const td = document.createElement("td"); td.textContent = value; tr.append(td);
+    });
+    $("sim-log").append(tr);
+    $("sim-caption").textContent = cursor + " / " + plan.length + " samples delivered. Times are session-relative seconds.";
+    $("next-sample").disabled = cursor >= plan.length; $("run-sequence").disabled = cursor >= plan.length;
+  }
+  $("scenario").addEventListener("change", resetSequence);
+  $("next-sample").addEventListener("click", nextSample);
+  $("run-sequence").addEventListener("click", () => { while (cursor < plan.length) nextSample(); });
+  $("reset-sequence").addEventListener("click", resetSequence);
+  // Expose the pure demonstration functions for verification against Python.
+  window.JumpingJackGuide = Object.freeze({makePose, inspectPose, DemoCounter, scenarios});
+  renderPose(); resetSequence();
+})();
+</script>
+</body>
+</html>
